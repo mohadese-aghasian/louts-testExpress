@@ -13,9 +13,9 @@ var userInfo={};
 // export.name --> creating my own module
 exports.viewLogin= (req, res)=>{
     if(req.isAuthenticated()){
-        res.render("blogs/login");
+        res.redirect("blogs/allblogs");
     }else{
-        res.render("blogs/login");
+        res.render("loginpage");
     }
 };
 exports.logout= (req, res)=>{
@@ -24,7 +24,7 @@ exports.logout= (req, res)=>{
             if(err){
                 res.status(500).send(err); 
             }else{
-                res.render("/login");
+                res.render("loginpage");
             }
         });
     }else{
