@@ -4,70 +4,73 @@ const User = require("../models/userModel");
 const Blog = require("../models/blogModel");
 const Like= require("../models/likeModel");
 const md5 = require("md5");
+const passportLocalMongoose=require("passport-local-mongoose");
+const passport = require('passport');
+
 
 var userInfo={};
 
 // export.name --> creating my own module
 exports.viewLogin= (req, res)=>{
-    if(Object.keys(userInfo).length === 0){
-        res.render("loginpage");
+    if(req.isAuthenticated()){
+        res.render("blogs/login");
     }else{
-        res.render("blog");
+        res.render("blogs/login");
     }
 };
 exports.logout= (req, res)=>{
-    if(Object.keys(userInfo).length === 0){
-        res.send("you need to login first.");
+    if(req.isAuthenticated()){
+        req.logout(function(err){
+            if(err){
+                res.status(500).send(err); 
+            }else{
+                res.render("/login");
+            }
+        });
     }else{
-        res.render("loginpage");
+        res.send("you need to login first.");
     }
 };
 
 exports.loginUser = async(req ,res)=>{
-    var myusername=req.body.username;
-    var mypassword=md5(req.body.password);
-    try{
-        var isuser= await User.findOne({username:myusername}).exec();
-        if(isuser){
-            console.log(isuser);
-            if(isuser.password==mypassword){
-                userInfo=isuser;
-                console.log(isuser);
-                res.render("blog");
-            }else{
-                res.send("the password is not matching!");
-            }
-        }else{
-            res.send("the user has not been found!");
-        }
 
-    }catch(err){
-        res.status(500).send(err);
-    }
+    const user = new User({
+        username: req.body.username,
+        password: req.body.password,
+    });
+
+    req.login(user, function(err){
+        if(err){
+            console.log(err);
+        }else{
+            passport.authenticate("local");
+            res.redirect("/blogs/allblogs");
+        }
+    });
+
 };
 
 exports.viewRegister= (req, res)=>{
     res.render("registerpage");
 };
 
-exports.registerUser= async(req, res)=>{
-    var username=req.body.username;
-    var password=md5(req.body.password); 
+exports.registerUser= function(req, res){
 
-    try{
-        userInfo={
-            username:username,
-            password:password
-        };
-        await User.create(userInfo);
-        res.render("loginpage");
-    } catch(err){
-        res.status(500).send(`erro:${err}`);
-    }
+    User.register({username:req.body.username}, req.body.password,function(err, user){
+
+            if(err){
+                console.log(err);
+                res.redirect("/blogs/register");
+            }else{
+               passport.authenticate("local")(req, res, function(){
+                res.redirect("/blogs/allblogs");
+               }); 
+            }
+        });
 };
 
 exports.getAllBlogs = async(req, res)=>{
-    if(Object.keys(userInfo).length !== 0){
+    if(req.isAuthenticated()){
     try{
         
         var allBlogs = await Blog.aggregate([
@@ -97,20 +100,19 @@ exports.getAllBlogs = async(req, res)=>{
         res.status(500).send("someting went wrong! cant show blogs");
     }
 }else{
-    res.send("you need to login first");
+    res.render("loginpage");
 }
 };
 
 exports.createNewBlog = async(req, res)=>{
     console.log(userInfo);
     try{
-        var author= await User.findOne({_id:userInfo}).exec();
+        var author= await User.findOne({_id:req.user._id}).exec();
         await Blog.create({
             title:req.body.title,
             content:req.body.content,
             author:author,
         });
-        console.log(userInfo);
         res.status(201).send("successfully created.");
     }
     catch(err){
@@ -121,7 +123,7 @@ exports.createNewBlog = async(req, res)=>{
 exports.likeBlog= async(req, res)=>{
     var likeobj= await Like.findOne({
         blog:req.params.blogid,
-        user:userInfo
+        user:req.user
     },"_id").exec();
 
     if(likeobj){
@@ -135,9 +137,10 @@ exports.likeBlog= async(req, res)=>{
         var myblog=await Blog.findOne({_id:req.params.blogid}).exec();
         console.log(myblog);
         try{
+            console.log(`*****user:${req.user}`);
             await Like.create({
                 blog:myblog, 
-                user:userInfo
+                user:req.user
             });
             res.send("liked successfully!");
 
