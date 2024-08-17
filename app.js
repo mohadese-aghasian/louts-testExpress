@@ -13,7 +13,6 @@ const app= express();
 const port=3000;
 
 app.set("view engine", "ejs");
-app.use(express.static("public"));
 app.use(bodyparser.urlencoded({extended:true}));
 app.use(session({
     secret: "my little secret",
@@ -29,10 +28,10 @@ mongoose.connect(process.env.MONGOURL);
 ////////////
 
 app.get("/", (req, res)=>{
-    res.render("home");
+    res.json({data:"home"});
 });
 
-app.use('/blogs', blogrouter);
+app.use('/api/v0', blogrouter);
 
 
 app.listen(port, ()=>{

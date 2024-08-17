@@ -22,13 +22,13 @@ exports.logout= (req, res)=>{
     if(req.isAuthenticated()){
         req.logout(function(err){
             if(err){
-                res.status(500).send(err); 
+                res.status(500).json({error:err}); 
             }else{
                 res.render("loginpage");
             }
         });
     }else{
-        res.send("you need to login first.");
+        res.json({message:"you need to login first."});
     }
 };
 
@@ -97,10 +97,10 @@ exports.getAllBlogs = async(req, res)=>{
         res.render("blog", {allBlogs:JSON.stringify(allBlogs)});
         // console.log(allBlogs);
     }catch(err){
-        res.status(500).send("someting went wrong! cant show blogs");
+        res.status(500).json({error:"someting went wrong! cant show blogs"});
     }
 }else{
-    res.render("loginpage");
+    res.json({message:"you need to login"});
 }
 };
 
@@ -113,10 +113,10 @@ exports.createNewBlog = async(req, res)=>{
             content:req.body.content,
             author:author,
         });
-        res.status(201).send("successfully created.");
+        res.status(201).json({message:"successfully created."});
     }
     catch(err){
-        res.status(500).send(err.message);
+        res.status(500).json({error:err.message});
     }
 };
 
@@ -131,7 +131,7 @@ exports.likeBlog= async(req, res)=>{
         await Like.findByIdAndDelete(likeobj._id);
         res.send("unliked successfully!");
         }catch(err){
-            res.status(500).send(err);
+            res.status(500).json({error:err});
         }
     }else{
         var myblog=await Blog.findOne({_id:req.params.blogid}).exec();
@@ -142,10 +142,10 @@ exports.likeBlog= async(req, res)=>{
                 blog:myblog, 
                 user:req.user
             });
-            res.send("liked successfully!");
+            res.json({message:"liked successfully!"});
 
         }catch(err){
-            res.status(500).send(err);
+            res.status(500).json({error:err});
         }
     }
 };
