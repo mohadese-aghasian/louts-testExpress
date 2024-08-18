@@ -1,14 +1,13 @@
 const express= require('express');
-const bodyParser = require('body-parser');
 const sequelize = require('../models/index');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/userModelPg');
-const Blog = require('../models/blogModelPg');
-const Like =require("../models/likeModelPg");
+// const User = require('../models/userModelPg');
+// const Blog = require('../models/blogModelPg');
+// const Like =require("../models/likeModelPg");
 const authenticateJWT = require('../middleware/authMiddleware');
 const { Pool } = require('pg');
-
+const { Blog, User, Like} = require('../models/allmodels');
 
 const pool = new Pool({
     user: 'postgres',
@@ -20,7 +19,6 @@ const pool = new Pool({
 
 
 exports.login=async(req, res)=>{
-    const { username, password } = req.body;
 
     const user = await User.findOne({ where: { username:req.body.username } });
 
@@ -33,7 +31,6 @@ exports.login=async(req, res)=>{
     const token = jwt.sign({ userId: user.id }, 'lotus_secret', { expiresIn: '1h' });
     // Store token in the database
     await pool.query('INSERT INTO user_tokens (user_id, token) VALUES ($1, $2)', [user.id, token]);
-
     res.json({ token });
 };
 
@@ -59,6 +56,7 @@ exports.createBlog=async (req, res) => {
     const { title, content } = req.body;
 
     try {
+
         const blog = await Blog.create({ title, content, userId: req.user.userId });
         res.status(201).json(blog);
     } catch (err) {
@@ -67,20 +65,41 @@ exports.createBlog=async (req, res) => {
 };
 
 exports.getAllBlogs=async(req, res)=>{
+
+    try{
     const blogs = await Blog.findAll({
         include: [{ model: User, as: 'author', attributes: ['username'] }]
     });
-    console.log("********");
     res.json(blogs);
-};
+    }catch(err){
+        console.log(err);
+        res.status(500).json({error:err.message});
+}};
 
 exports.likeBlog=async(req, res)=>{
     const { blogId } = req.params;
     const userId = req.user.userId;
 
     try {
-        const [like, created] = await Like.findOrCreate({ where: { blogId, userId } });
-        res.status(201).json(like);
+        // const [like, created] = await Like.findOrCreate({ where: { blogId, userId } });
+        const like = await Like.findOne({
+            where:{
+                blogId : blogId
+            }
+        });
+        const thisblog = await Blog.findByPk(blogId);
+        if(like){
+            await like.destroy(); 
+            const decrementResult = await thisblog.decrement('likeNum',{by:1});
+            res.status(202).json({message:"unliked successfully!", decrementResult:decrementResult});
+        }else{
+            const newlike = await Like.create({
+                userId:req.user.userId,
+                blogId:blogId
+            });
+            const incrementResult = await thisblog.increment('likeNum', { by:1 });
+            res.status(201).json({like:newlike, incrementResult:incrementResult});
+        }
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

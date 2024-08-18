@@ -12,8 +12,6 @@ const pool = new Pool({
 
 const authenticateJWT = async (req, res, next) => {
     const authHeader = req.headers.authorization;
-    console.log("** auth Header:");
-    console.log(authHeader);
     console.log(req.headers);
 
     if (authHeader) {

@@ -1,8 +1,10 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('./index');
+// const Blog= require("./blogModelPg");
+const Like= require("./likeModelPg");
 
 const User = sequelize.define('User', {
-    username: {
+    username: { 
         type: DataTypes.STRING,
         allowNull: false,
         unique: true
@@ -13,4 +15,10 @@ const User = sequelize.define('User', {
     }
 });
 
+// User.hasMany(Blog, { foreignKey: 'userId' });
+// User.hasMany(Like, { foreignKey: 'userId' });
+// User.associate = (models) => {
+//     User.hasMany(models.Blog, { foreignKey: 'userId' });
+//     User.hasMany(models.Like, { foreignKey: 'userId' });
+// };
 module.exports = User;

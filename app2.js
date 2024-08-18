@@ -11,11 +11,6 @@ const port=3000;
 app.use(bodyparser.urlencoded({extended:true}));
 app.use(express.json());
 
-//sequelize.sync({ force: true }).then(() => {
-//    console.log("Database & tables created!");
-//});
-
-
 app.get("/", (req, res)=>{
     res.json({data:"home"});
 });
@@ -23,10 +18,10 @@ app.get("/", (req, res)=>{
 app.use('/api/v1', blogrouter);
 
 
-//sequelize.sync({ force: true }).then(() => {
+// sequelize.sync({ force: true }).then(() => {
 //    console.log("Database & tables created!");
-//});
-
+// });
+// sequelize.sync({ alter: true });
 
 
 

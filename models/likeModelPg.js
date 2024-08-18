@@ -20,7 +20,11 @@ const Like = sequelize.define('Like', {
     }
 });
 
-Like.belongsTo(User, { foreignKey: 'userId' });
-Like.belongsTo(Blog, { foreignKey: 'blogId' });
+// Like.belongsTo(Blog, { foreignKey: 'blogId' });
+// Like.belongsTo(User, { foreignKey: 'userId' });
+Like.associate = (models) => {
+    Like.belongsTo(models.User, { foreignKey: 'userId' });
+    Like.belongsTo(models.Blog, { foreignKey: 'blogId' });
+};
 
 module.exports = Like;
