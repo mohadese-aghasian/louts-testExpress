@@ -1,39 +1,32 @@
 require("dotenv").config();
 const express = require("express");
 const bodyparser= require('body-parser');
-const ejs = require("ejs");
-const mongoose=require('mongoose');
 const blogrouter=require("./routes/router");
-const passport = require("passport");
-const passportLocalMongoose=require("passport-local-mongoose");
-const session =require("express-session");
+const sequelize = require('./models/index');
+
 
 
 const app= express();
 const port=3000;
 
-app.set("view engine", "ejs");
 app.use(bodyparser.urlencoded({extended:true}));
-app.use(session({
-    secret: "my little secret",
-    resave:false,
-    saveUninitialized:false,
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
-/////////  Database
-mongoose.connect(process.env.MONGOURL);
-
-////////////
+app.use(express.json());
 
 app.get("/", (req, res)=>{
     res.json({data:"home"});
 });
+//app.use(authenticateJWT);
+app.use('/api/v1', blogrouter);
 
-app.use('/api/v0', blogrouter);
+
+// sequelize.sync({ force: true }).then(() => {
+//    console.log("Database & tables created!");
+// });
+// sequelize.sync({ alter: true });
+
 
 
 app.listen(port, ()=>{
     console.log(`server running on port ${port}.`);
+
 });

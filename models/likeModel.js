@@ -1,18 +1,30 @@
-const mongoose=require("mongoose");
-const User=require("./userModel");
-const Blog=require('./blogModel');
+const { DataTypes } = require('sequelize');
+const sequelize = require('./index');
+const User = require('./userModel');
+const Blog = require('./blogModel');
 
-const likeSchema=mongoose.Schema({
-    blog:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Blog",
-        required:true,
+const Like = sequelize.define('Like', {
+    blogId: {
+        type: DataTypes.INTEGER,
+        references: {
+            model: Blog,
+            key: 'id'
+        }
     },
-    user:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required:true
+    userId: {
+        type: DataTypes.INTEGER,
+        references: {
+            model: User,
+            key: 'id'
+        }
     }
 });
-const Like = mongoose.model("Like", likeSchema);
-module.exports=Like;
+
+// Like.belongsTo(Blogmodel, { foreignKey: 'blogId' });
+// Like.belongsTo(Usermodel, { foreignKey: 'userId' });
+// Like.associate = (models) => {
+//     Like.belongsTo(models.User, { foreignKey: 'userId' });
+//     Like.belongsTo(models.Blog, { foreignKey: 'blogId' });
+// };
+
+module.exports = Like;

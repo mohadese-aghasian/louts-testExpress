@@ -1,21 +1,24 @@
-const mongoose=require("mongoose");
-const User=require("./userModel");
+const { DataTypes } = require('sequelize');
+const sequelize = require('./index');
 
-const blogSchema=mongoose.Schema({
-    title:{
-        type:String,
-        required:true,
+
+const Blog = sequelize.define('Blog', {
+    title: {
+        type: DataTypes.STRING,
+        allowNull: false
     },
-    content:{
-        type:String,
-        required:true
+    content: {
+        type: DataTypes.TEXT,
+        allowNull: false
     },
-    author:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required:true
+    likeNum:{
+        type:DataTypes.INTEGER, 
+        defaultValue:0,
     }
-
 });
-const Blog = mongoose.model("Blog", blogSchema);
-module.exports=Blog;
+
+
+// Blog.belongsTo(User, { foreignKey: 'userId', as: 'author' });
+
+
+module.exports = Blog;

@@ -1,153 +1,104 @@
 const express= require('express');
-const mongoose=require("mongoose");
-const User = require("../models/userModel");
-const Blog = require("../models/blogModel");
-const Like= require("../models/likeModel");
-const md5 = require("md5");
-const passportLocalMongoose=require("passport-local-mongoose");
-const passport = require('passport');
+const sequelize = require('../models/index');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const authenticateJWT = require('../middleware/authMiddleware');
+const { Pool } = require('pg');
+const {userModel, blogModel, likeModel} = require('../models/allmodels');
 
 
-var userInfo={};
+const pool = new Pool({
+    user: 'postgres',
+    host: 'localhost',
+    database: 'userblogdb',
+    password: 'postgres76555432',
+    port: 5432,
+});
 
-// export.name --> creating my own module
-exports.viewLogin= (req, res)=>{
-    if(req.isAuthenticated()){
-        res.redirect("blogs/allblogs");
-    }else{
-        res.render("loginpage");
+
+exports.login=async(req, res)=>{
+
+    const user = await userModel.findOne({ where: { username:req.body.username } });
+
+    if (!user) {
+        return res.status(401).json({ message: 'Invalid username' });
     }
-};
-exports.logout= (req, res)=>{
-    if(req.isAuthenticated()){
-        req.logout(function(err){
-            if(err){
-                res.status(500).json({error:err}); 
-            }else{
-                res.render("loginpage");
-            }
-        });
-    }else{
-        res.json({message:"you need to login first."});
+    if(!(await bcrypt.compare(req.body.password, user.password))){
+        return res.status(401).json({ message: 'Invalid password' });
     }
+    const token = jwt.sign({ userId: user.id }, 'lotus_secret', { expiresIn: '1h' });
+    // Store token in the database
+    await pool.query('INSERT INTO user_tokens (user_id, token) VALUES ($1, $2)', [user.id, token]);
+    res.json({ token });
 };
 
-exports.loginUser = async(req ,res)=>{
-
-    const user = new User({
-        username: req.body.username,
-        password: req.body.password,
-    });
-
-    req.login(user, function(err){
-        if(err){
-            console.log(err);
-        }else{
-            passport.authenticate("local");
-            res.redirect("/blogs/allblogs");
-        }
-    });
-
+exports.logout= async(req, res)=>{
+    const token = req.headers.authorization.split(' ')[1];
+    await pool.query('DELETE FROM user_tokens WHERE token = $1', [token]);
+    res.status(200).json({ message: 'Logged out successfully' });
 };
 
-exports.viewRegister= (req, res)=>{
-    res.render("registerpage");
-};
+exports.register=async(req, res)=>{
+    const { username, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-exports.registerUser= function(req, res){
-
-    User.register({username:req.body.username}, req.body.password,function(err, user){
-
-            if(err){
-                console.log(err);
-                res.redirect("/blogs/register");
-            }else{
-               passport.authenticate("local")(req, res, function(){
-                res.redirect("/blogs/allblogs");
-               }); 
-            }
-        });
-};
-
-exports.getAllBlogs = async(req, res)=>{
-    if(req.isAuthenticated()){
-    try{
-        
-        var allBlogs = await Blog.aggregate([
-            {
-                $lookup: {
-                    from: 'likes', 
-                    localField: '_id',
-                    foreignField: 'blog',
-                    as: 'likes'
-                }
-            },
-            {
-                $addFields: {
-                    likeCount: { $size: '$likes' }
-                }
-            },
-            {
-                $project: {
-                    likes: 0 
-                }
-            }
-        ]);
-
-        res.render("blog", {allBlogs:JSON.stringify(allBlogs)});
-        // console.log(allBlogs);
-    }catch(err){
-        res.status(500).json({error:"someting went wrong! cant show blogs"});
-    }
-}else{
-    res.json({message:"you need to login"});
+    try {
+        const newUser = await userModel.create({ username, password: hashedPassword });
+        res.status(201).json(newUser);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }   
 }
+
+exports.createBlog=async (req, res) => {
+    const { title, content } = req.body;
+
+    try {
+
+        const blog = await blogModel.create({ title, content, userId: req.user.userId });
+        res.status(201).json(blog);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 };
 
-exports.createNewBlog = async(req, res)=>{
-    console.log(userInfo);
+exports.getAllBlogs=async(req, res)=>{
+
     try{
-        var author= await User.findOne({_id:req.user._id}).exec();
-        await Blog.create({
-            title:req.body.title,
-            content:req.body.content,
-            author:author,
-        });
-        res.status(201).json({message:"successfully created."});
-    }
-    catch(err){
+    const blogs = await blogModel.findAll({
+        include: [{ model: userModel, as: 'author', attributes: ['username'] }]
+    });
+    res.json(blogs);
+    }catch(err){
+        console.log(err);
         res.status(500).json({error:err.message});
-    }
-};
+}};
 
-exports.likeBlog= async(req, res)=>{
-    var likeobj= await Like.findOne({
-        blog:req.params.blogid,
-        user:req.user
-    },"_id").exec();
+exports.likeBlog=async(req, res)=>{
+    const { blogId } = req.params;
+    const userId = req.user.userId;
 
-    if(likeobj){
-        try{
-        await Like.findByIdAndDelete(likeobj._id);
-        res.send("unliked successfully!");
-        }catch(err){
-            res.status(500).json({error:err});
-        }
-    }else{
-        var myblog=await Blog.findOne({_id:req.params.blogid}).exec();
-        console.log(myblog);
-        try{
-            console.log(`*****user:${req.user}`);
-            await Like.create({
-                blog:myblog, 
-                user:req.user
+    try {
+        // const [like, created] = await Like.findOrCreate({ where: { blogId, userId } });
+        const like = await likeModel.findOne({
+            where:{
+                blogId : blogId
+            }
+        });
+        const thisblog = await blogModel.findByPk(blogId);
+        if(like){
+            await like.destroy(); 
+            const decrementResult = await thisblog.decrement('likeNum',{by:1});
+            res.status(202).json({message:"unliked successfully!", decrementResult:decrementResult});
+        }else{
+            const newlike = await likeModel.create({
+                userId:req.user.userId,
+                blogId:blogId
             });
-            res.json({message:"liked successfully!"});
-
-        }catch(err){
-            res.status(500).json({error:err});
+            const incrementResult = await thisblog.increment('likeNum', { by:1 });
+            res.status(201).json({like:newlike, incrementResult:incrementResult});
         }
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
 };
-
-

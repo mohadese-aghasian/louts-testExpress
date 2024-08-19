@@ -1,25 +1,24 @@
-const mongoose=require("mongoose");
-const passportLocalMongoose=require("passport-local-mongoose");
-const passport = require("passport");
+const { DataTypes } = require('sequelize');
+const sequelize = require('./index');
 
-const userSchema=mongoose.Schema({
-    username:{
-        type:String,
-        required:true,
-        unique:true,
+
+const user= sequelize.define('User', {
+    username: { 
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
     },
-    // password:{
-    //     type:String,
-    //     required:true
-    // }
+    password: {
+        type: DataTypes.STRING,
+        allowNull: false
+    }
 });
 
-userSchema.plugin(passportLocalMongoose);
 
-const User = mongoose.model("User", userSchema);
-
-passport.use(User.createStrategy());
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
-
-module.exports=User;
+// User.hasMany(Blog, { foreignKey: 'userId' });
+// User.hasMany(Like, { foreignKey: 'userId' });
+// User.associate = (models) => {
+//     User.hasMany(models.Blog, { foreignKey: 'userId' });
+//     User.hasMany(models.Like, { foreignKey: 'userId' });
+// };
+module.exports = user;
