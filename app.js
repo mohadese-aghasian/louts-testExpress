@@ -5,7 +5,6 @@ const blogrouter=require("./routes/router");
 const sequelize = require('./models/index');
 
 
-
 const app= express();
 const port=3000;
 
@@ -23,7 +22,6 @@ app.use('/api/v1', blogrouter);
 //    console.log("Database & tables created!");
 // });
 // sequelize.sync({ alter: true });
-
 
 
 app.listen(port, ()=>{

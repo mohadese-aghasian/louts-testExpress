@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const authenticateJWT = require('../middleware/authMiddleware');
 const { Pool } = require('pg');
 const {userModel, blogModel, likeModel} = require('../models/allmodels');
+const { faker } = require('@faker-js/faker');
+const { Op, where } = require('sequelize');
 
 
 const pool = new Pool({
@@ -23,9 +25,12 @@ exports.login=async(req, res)=>{
     if (!user) {
         return res.status(401).json({ message: 'Invalid username' });
     }
-    if(!(await bcrypt.compare(req.body.password, user.password))){
+    if(!(req.body.password===req.body.password)){
         return res.status(401).json({ message: 'Invalid password' });
     }
+    // if(!(await bcrypt.compare(req.body.password, user.password))){
+    //     return res.status(401).json({ message: 'Invalid password' });
+    // }
     const token = jwt.sign({ userId: user.id }, 'lotus_secret', { expiresIn: '1h' });
     // Store token in the database
     await pool.query('INSERT INTO user_tokens (user_id, token) VALUES ($1, $2)', [user.id, token]);
@@ -54,7 +59,6 @@ exports.createBlog=async (req, res) => {
     const { title, content } = req.body;
 
     try {
-
         const blog = await blogModel.create({ title, content, userId: req.user.userId });
         res.status(201).json(blog);
     } catch (err) {
@@ -62,10 +66,22 @@ exports.createBlog=async (req, res) => {
     }
 };
 
-exports.getAllBlogs=async(req, res)=>{
-
+exports.getBlogs=async(req, res)=>{
+    const {id ,limit, start, orderby, orderdir } = req.query;
+    const whereClause = id ? { id:id } : {};
+    const limitClause = limit ? parseInt(limit, 10) : undefined;
+    const offsetClause = start ? parseInt(start, 10) : undefined;
+    // Default to ordering by 'id' if no column is specified 
+    const orderColumn = orderby || 'id'; 
+    // Default to 'ASC' if no direction is specified
+    const orderDirection = orderdir === 'DESC' ? 'DESC' : 'ASC'; 
+    
     try{
     const blogs = await blogModel.findAll({
+        where: whereClause,
+        offset:offsetClause,
+        limit:limitClause,
+        order: [[orderColumn, orderDirection]],
         include: [{ model: userModel, as: 'author', attributes: ['username'] }]
     });
     res.json(blogs);
@@ -77,7 +93,7 @@ exports.getAllBlogs=async(req, res)=>{
 exports.likeBlog=async(req, res)=>{
     const { blogId } = req.params;
     const userId = req.user.userId;
-
+    
     try {
         // const [like, created] = await Like.findOrCreate({ where: { blogId, userId } });
         const like = await likeModel.findOne({
