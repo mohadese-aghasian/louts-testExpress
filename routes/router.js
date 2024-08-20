@@ -10,6 +10,6 @@ router.get('/logout', authenticateJWT, Controller.logout);
 router.post("/blogs", authenticateJWT, Controller.createBlog);
 router.get("/blogs", authenticateJWT, Controller.getBlogs);
 router.post('/blogs/like/:blogId', authenticateJWT, Controller.likeBlog);
-
+router.get("/blogs/oneblog/", authenticateJWT, Controller.getSingleBlog);
 
 module.exports=router;

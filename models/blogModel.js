@@ -14,7 +14,7 @@ const Blog = sequelize.define('Blog', {
     likeNum:{
         type:DataTypes.INTEGER, 
         defaultValue:0,
-    }
+    }, 
 });
 
 

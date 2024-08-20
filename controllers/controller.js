@@ -7,6 +7,7 @@ const { Pool } = require('pg');
 const {userModel, blogModel, likeModel} = require('../models/allmodels');
 const { faker } = require('@faker-js/faker');
 const { Op, where } = require('sequelize');
+const Joi = require("joi");
 
 
 const pool = new Pool({
@@ -44,11 +45,11 @@ exports.logout= async(req, res)=>{
 };
 
 exports.register=async(req, res)=>{
-    const { username, password } = req.body;
+    const { username, password , email} = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
-        const newUser = await userModel.create({ username, password: hashedPassword });
+        const newUser = await userModel.create({ username, password: hashedPassword,email:email });
         res.status(201).json(newUser);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -67,18 +68,34 @@ exports.createBlog=async (req, res) => {
 };
 
 exports.getBlogs=async(req, res)=>{
-    const {id ,limit, start, orderby, orderdir } = req.query;
-    const whereClause = id ? { id:id } : {};
+    const {limit, start, orderby, orderdir } = req.query;
     const limitClause = limit ? parseInt(limit, 10) : undefined;
     const offsetClause = start ? parseInt(start, 10) : undefined;
+
     // Default to ordering by 'id' if no column is specified 
     const orderColumn = orderby || 'id'; 
     // Default to 'ASC' if no direction is specified
     const orderDirection = orderdir === 'DESC' ? 'DESC' : 'ASC'; 
+
+    const schema = Joi.object({
+        limit: Joi.number().integer(),
+        start:Joi.number().integer(),
+        orderBy: Joi.string().valid('title', 'createdAt', 'updatedAt','content','id','likeNum',"userId").default('id'),
+        orderDirection: Joi.string().valid('ASC', 'DESC').default('ASC'),
+    });
     
+    const { error, value } = schema.validate({
+        limit: limitClause,
+        start: offsetClause,
+        orderBy: orderColumn,
+        orderDirection: orderDirection,
+    });
+    if(error){
+        return res.status(400).json({message:"Invalid format for parameters!"});
+    }
+
     try{
     const blogs = await blogModel.findAll({
-        where: whereClause,
         offset:offsetClause,
         limit:limitClause,
         order: [[orderColumn, orderDirection]],
@@ -86,9 +103,32 @@ exports.getBlogs=async(req, res)=>{
     });
     res.json(blogs);
     }catch(err){
-        console.log(err);
         res.status(500).json({error:err.message});
 }};
+
+exports.getSingleBlog=async(req, res)=>{
+
+    const {id}= req.query;
+    const schema = Joi.object({
+        id: Joi.number().integer().required(),
+    });
+
+    try{
+        
+        const {error} = schema.validate({ id: id });
+        if(error){
+            return res.status(400).json({message:"Invalid format, id must be an integer!"});
+        }
+
+        const blogs = await blogModel.findAll({
+            where: {id: parseInt(id, 10)},
+            include: [{ model: userModel, as: 'author', attributes: ['username'] }]
+        });
+        res.json(blogs);
+        }catch(err){
+            res.status(500).json({error:err.message});
+        }
+}
 
 exports.likeBlog=async(req, res)=>{
     const { blogId } = req.params;
