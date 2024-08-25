@@ -1,15 +1,14 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('./index');
-const User = require('./userModel');
-const Product = require('./productModel');
+const Cart= require("./cartModel");
+const Product=require("./productModel");
 
-
-const FavouriteProduct=sequelize.define("FavouriteProduct",{
-    userId:{
+const CartItem=sequelize.define("CartItem", {
+    cartId:{
         type:DataTypes.INTEGER,
         references:{
-            model:User,
-            key: 'id'
+            model:Cart,
+            key:"id"
         }
     },
     productId:{
@@ -19,6 +18,10 @@ const FavouriteProduct=sequelize.define("FavouriteProduct",{
             key:"id"
         }
     },
+    quantity:{
+        type:DataTypes.INTEGER,
+        defaultValue:1,
+    }
 });
 
-module.exports=FavouriteProduct;
+module.exports=CartItem;
