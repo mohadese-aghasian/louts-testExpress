@@ -1,14 +1,6 @@
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { Pool } = require('pg');
-
-const pool = new Pool({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'userblogdb',
-    password: 'postgres76555432',
-    port: 5432,
-});
+const jwt = require('jsonwebtoken');    
+const db = require("../models/index");
 
 const authenticateJWT = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -21,8 +13,8 @@ const authenticateJWT = async (req, res, next) => {
             const decoded = jwt.verify(token, 'lotus_secret');
 
             // verify the token exists in your database
-            const result = await pool.query('SELECT * FROM user_tokens WHERE token = $1', [token]);
-            if (result.rows.length === 0) {
+            const result = await db.UserTokens.findOne({where:{token:token}});
+            if (!result) {
                 return res.status(401).json({ message: 'Token not found in database' });
             }
             console.log(decoded);

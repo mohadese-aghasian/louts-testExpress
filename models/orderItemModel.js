@@ -1,9 +1,9 @@
 module.exports = (sequelize, DataTypes) =>{
-    const CartItems=sequelize.define("CartItems", {
-        cartId:{
+    const OrderItems=sequelize.define("OrderItems", {
+        orderId:{
             type:DataTypes.INTEGER,
             references:{
-                model:'Carts',
+                model:'Orders',
                 key:"id"
             }
         },
@@ -19,7 +19,10 @@ module.exports = (sequelize, DataTypes) =>{
             defaultValue:1,
         }
     });
-    return CartItems;
+    OrderItems.associate=(models)=>{
+        OrderItems.belongsTo(models.Orders, {foreignKey:"orderId"});
+        // OrderItems.belongsToMany(models.Products, {foreignKey:"productId"});
+    }
+    return OrderItems;
     
 }
-

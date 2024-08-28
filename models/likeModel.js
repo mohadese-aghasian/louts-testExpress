@@ -1,30 +1,25 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('./index');
-const User = require('./userModel');
-const Blog = require('./blogModel');
-
-const Like = sequelize.define('Like', {
+module.exports = (sequelize, DataTypes) =>{
+    
+const Likes = sequelize.define('Likes', {
     blogId: {
         type: DataTypes.INTEGER,
         references: {
-            model: Blog,
+            model: 'Blogs',
             key: 'id'
         }
     },
     userId: {
         type: DataTypes.INTEGER,
         references: {
-            model: User,
+            model: 'Users',
             key: 'id'
         }
     }
 });
 
-// Like.belongsTo(Blogmodel, { foreignKey: 'blogId' });
-// Like.belongsTo(Usermodel, { foreignKey: 'userId' });
-// Like.associate = (models) => {
-//     Like.belongsTo(models.User, { foreignKey: 'userId' });
-//     Like.belongsTo(models.Blog, { foreignKey: 'blogId' });
-// };
-
-module.exports = Like;
+    Likes.associate=(models)=>{
+        Likes.belongsTo(models.Blogs, { foreignKey: 'blogId'});
+        Likes.belongsTo(models.Users, { foreignKey: 'userId' });
+    };
+    return Likes;
+}

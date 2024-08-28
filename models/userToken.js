@@ -1,7 +1,6 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('./index'); // Adjust the path to your Sequelize instance
-
-const UserToken = sequelize.define('UserToken', {
+module.exports = (sequelize, DataTypes) =>{
+    
+const UserTokens = sequelize.define('UserTokens', {
     user_id: {
         type: DataTypes.INTEGER,
         references: {
@@ -19,8 +18,10 @@ const UserToken = sequelize.define('UserToken', {
         defaultValue: DataTypes.NOW
     }
 }, {
-    tableName: 'user_tokens',
     timestamps: false
 });
-
-module.exports = UserToken;
+    UserTokens.associate=(models)=>{
+        UserTokens.belongsTo(models.Users, {foreignKey:'user_id'});
+    }
+    return UserTokens;
+}

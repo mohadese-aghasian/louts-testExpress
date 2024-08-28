@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const authenticateJWT = require('../middleware/authMiddleware');
 const Controller = require('../controllers/controller');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('../swaggerConfig');
 
 /////////////
 
@@ -198,21 +200,19 @@ const Controller = require('../controllers/controller');
  *       401:
  *         description: Invalid credentials
  */
+////////////
 
 router.post("/login", Controller.login);
 router.post("/register", Controller.register);
 router.get('/logout', authenticateJWT, Controller.logout);
 
 router.post("/blogs", authenticateJWT, Controller.createBlog);
-router.get("/blogs", authenticateJWT, Controller.getBlogs);
+router.get("/blogs", Controller.getBlogs);
 router.post('/blogs/like/:blogId', authenticateJWT, Controller.likeBlog);
 router.get("/blogs/oneblog/", authenticateJWT, Controller.getSingleBlog);
 
-const swaggerUi = require('swagger-ui-express');
-const swaggerDocument = require('./swagger.json');
-
 router.use('api/v1/api-docs', swaggerUi.serve);
-router.get('api/v1/api-docs', swaggerUi.setup(swaggerDocument));
+router.get('api/v1/api-docs', swaggerUi.setup(swaggerSpec));
 
 
 module.exports=router;
