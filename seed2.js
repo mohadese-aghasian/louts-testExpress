@@ -79,7 +79,7 @@ const { options } = require('joi');
         }
         for(let i=0;i<100;i++){
             const gallery=await db.ProductGalleries.create({
-                productId:products[faker.number.int({min:0,max:99})].id,
+                productId:faker.number.int({min:602,max:701}),
                 path:faker.image.url({options:{width:200,height:200}}),
                 
             });

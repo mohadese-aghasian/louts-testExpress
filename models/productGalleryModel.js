@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) =>{
-    const ProductGallery=sequelize.define('ProductGallery', {
+    const ProductGalleries=sequelize.define('ProductGalleries', {
         id: {
             allowNull: false,
             autoIncrement: true,
@@ -19,9 +19,9 @@ module.exports = (sequelize, DataTypes) =>{
             allowNull:false,
         }
     });
-    ProductGallery.associate=(models)=>{
+    ProductGalleries.associate=(models)=>{
         // ProductGallery.belongsToMany(models.Products, {foreignKey:"productId"});
     }
-    return ProductGallery;
+    return ProductGalleries;
     
 }

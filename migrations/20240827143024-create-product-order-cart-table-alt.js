@@ -4,32 +4,32 @@
 module.exports = {
   async up (queryInterface, Sequelize) {
     
-    // await queryInterface.createTable("Products", {
-    //     id: {
-    //         allowNull: false,
-    //         autoIncrement: true,
-    //         primaryKey: true,
-    //         type:Sequelize.INTEGER
-    //       },
-    //     title:{
-    //         type:Sequelize.STRING,
-    //         allowNull:false,
-    //     },
-    //     description:{
-    //         type:Sequelize.STRING, 
-    //         allowNull:false,
-    //     },
-    //     price:{
-    //         type:Sequelize.FLOAT,
-    //         allowNull:false,
-    //     },
-    //     cover:{
-    //         type:Sequelize.STRING,
-    //         allowNull:true,
-    //     },
-    // },{
-    //     timestamps: true,
-    //  });
+    await queryInterface.createTable("Products", {
+        id: {
+            allowNull: false,
+            autoIncrement: true,
+            primaryKey: true,
+            type:Sequelize.INTEGER
+          },
+        title:{
+            type:Sequelize.STRING,
+            allowNull:false,
+        },
+        description:{
+            type:Sequelize.STRING, 
+            allowNull:false,
+        },
+        price:{
+            type:Sequelize.FLOAT,
+            allowNull:false,
+        },
+        cover:{
+            type:Sequelize.STRING,
+            allowNull:true,
+        },
+    },{
+        timestamps: true,
+     });
 
     await queryInterface.createTable("ProductGallery", {
         id: {
@@ -54,56 +54,56 @@ module.exports = {
         timestamps: true,
      });
 
-    // await queryInterface.createTable("Carts", {
-    //     id: {
-    //         allowNull: false,
-    //         autoIncrement: true,
-    //         primaryKey: true,
-    //         type: Sequelize.INTEGER
-    //       },
-    //     userId:{
-    //     type:Sequelize.INTEGER,
-    //         references:{
-    //             model:'Users',
-    //             key: 'id'
-    //         }
-    //     },
-    //     total:{
-    //         type:Sequelize.INTEGER,
-    //         defaultValue:0
-    //     },
-    // });
+    await queryInterface.createTable("Carts", {
+        id: {
+            allowNull: false,
+            autoIncrement: true,
+            primaryKey: true,
+            type: Sequelize.INTEGER
+          },
+        userId:{
+        type:Sequelize.INTEGER,
+            references:{
+                model:'Users',
+                key: 'id'
+            }
+        },
+        total:{
+            type:Sequelize.INTEGER,
+            defaultValue:0
+        },
+    });
    
-    // await queryInterface.createTable("CartItems", {
-    //     id: {
-    //         allowNull: false,
-    //         autoIncrement: true,
-    //         primaryKey: true,
-    //         type: Sequelize.INTEGER
-    //       },
-    //     cartId:{
-    //         type:Sequelize.INTEGER,
-    //         allowNull:false,
-    //         references:{
-    //             model:'Carts',
-    //             key:"id"
-    //         }
-    //     },
-    //     productId:{
-    //         type:Sequelize.INTEGER,
-    //         allowNull:false,
-    //         references:{
-    //             model:'Products',
-    //             key:"id"
-    //         }
-    //     },
-    //     quantity:{
-    //         type:Sequelize.INTEGER,
-    //         defaultValue:1,
-    //     }
-    // },{
-    //     timestamps: true,
-    //  });
+    await queryInterface.createTable("CartItems", {
+        id: {
+            allowNull: false,
+            autoIncrement: true,
+            primaryKey: true,
+            type: Sequelize.INTEGER
+          },
+        cartId:{
+            type:Sequelize.INTEGER,
+            allowNull:false,
+            references:{
+                model:'Carts',
+                key:"id"
+            }
+        },
+        productId:{
+            type:Sequelize.INTEGER,
+            allowNull:false,
+            references:{
+                model:'Products',
+                key:"id"
+            }
+        },
+        quantity:{
+            type:Sequelize.INTEGER,
+            defaultValue:1,
+        }
+    },{
+        timestamps: true,
+     });
 
     await queryInterface.createTable("Orders", {
         id: {
@@ -190,10 +190,10 @@ module.exports = {
     await queryInterface.dropTable("FavouriteProduct");
     await queryInterface.dropTable("OrderItems");
     await queryInterface.dropTable("Orders");
-    // await queryInterface.dropTable("CartItems");
-    // await queryInterface.dropTable("Carts");
+    await queryInterface.dropTable("CartItems");
+    await queryInterface.dropTable("Carts");
     await queryInterface.dropTable("ProductGallery");
-    // await queryInterface.dropTable("Products");
+    await queryInterface.dropTable("Products");
    
    
   
