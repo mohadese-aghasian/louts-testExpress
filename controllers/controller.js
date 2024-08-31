@@ -21,10 +21,10 @@ exports.login=async(req, res)=>{
     //     return res.status(401).json({ message: 'Invalid password' });
     // }
     try{
-    const token = jwt.sign({ userId: user.id }, 'lotus_secret', { expiresIn: '1h' });
-    // Store token in the database
-    await db.UserTokens.create({token:token, user_id:user.id});
-    res.status(200).json({ token });
+        const token = jwt.sign({ userId: user.id }, 'lotus_secret', { expiresIn: '1h' });
+        // Store token in the database
+        await db.UserTokens.create({token:token, user_id:user.id});
+        res.status(200).json({ token });
     }catch(err){
         res.status(500).json({message:err});
     }
@@ -124,7 +124,7 @@ exports.getSingleBlog=async(req, res)=>{
         }catch(err){
             res.status(500).json({error:err.message});
         }
-}
+};
 
 exports.likeBlog=async(req, res)=>{
     const { blogId } = req.params;

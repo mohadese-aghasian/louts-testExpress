@@ -17,7 +17,7 @@ const authenticateJWT = async (req, res, next) => {
             if (!result) {
                 return res.status(401).json({ message: 'Token not found in database' });
             }
-            console.log(decoded);
+            console.log("decoded****: ",decoded);
             req.user = decoded;
             next();
         } catch (err) {

@@ -17,15 +17,15 @@ module.exports = {
             key: 'id'
         },
         onDelete: 'CASCADE'
-    },
-    token: {
-        type: Sequelize.TEXT,
-        allowNull: false
-    },
-    created_at: {
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.NOW
-    }
+      },
+      token: {
+          type: Sequelize.TEXT,
+          allowNull: false
+      },
+      created_at: {
+          type: Sequelize.DATE,
+          defaultValue: Sequelize.NOW
+      }
 }, {
     timestamps: false
     });
