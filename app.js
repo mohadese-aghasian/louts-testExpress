@@ -1,7 +1,6 @@
 const express = require("express");
 const bodyparser= require('body-parser');
 const blogrouter=require("./routes/router");
-const sequelize = require('./models/index') ;
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swaggerConfig');
 const cors= require("cors");
@@ -35,6 +34,8 @@ app.get("/", (req, res)=>{
 
 //app.use(authenticateJWT);
 app.use('/api/v1', blogrouter);
+
+
 
 // Swagger setup
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

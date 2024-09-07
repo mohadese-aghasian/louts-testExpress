@@ -175,7 +175,6 @@ const swaggerSpec = require('../swaggerConfig');
  *       200:
  *         description: Swagger UI served successfully
  */
-/////////////
 /**
  * @swagger
  * /login:
@@ -200,8 +199,95 @@ const swaggerSpec = require('../swaggerConfig');
  *       401:
  *         description: Invalid credentials
  */
-////////////
+////////////////
+/**
+ * @swagger
+ * /products:
+ *   get:
+ *     summary: Get all Products
+ *     description: Retrieves a list of all products.
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   title:
+ *                     type: string
+ *                   description:
+ *                     type: string
+ *                   price:
+ *                     type: integer
+ *                   cover:
+ *                     type: string
+ *
+ *       500:
+ *         description: Server Error
+ */
+/**
+ * @swagger
+ * /products/addfavourite:
+ *   post:
+ *     summary: Add or remove a product from the user's favourites
+ *     description: Toggles the favourite status of a product for the authenticated user. If the product is already in favourites, it will be removed; otherwise, it will be added.
+ *     tags:
+ *       - Products
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               productId:
+ *                 type: integer
+ *                 description: The ID of the product to add or remove from favourites
+ *     responses:
+ *       201:
+ *         description: Product added to favourites successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: added to favourite!
+ *                 result:
+ *                   type: object
+ *                   description: The favourite product object
+ *       202:
+ *         description: Product removed from favourites successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: removed from favourite.
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Error message
+ */
 
+////////////
 router.post("/login", Controller.login);
 router.post("/register", Controller.register);
 router.get('/logout', authenticateJWT, Controller.logout);
@@ -211,6 +297,13 @@ router.get("/blogs", Controller.getBlogs);
 router.post('/blogs/like/:blogId', authenticateJWT, Controller.likeBlog);
 router.get("/blogs/oneblog/", authenticateJWT, Controller.getSingleBlog);
 
+/////////////////
+router.get("/products", Controller.products);
+router.post("/addproduct", Controller.addProduct);
+router.post("products/addfavourite", authenticateJWT, Controller.addFavourite);
+router.get("products/oneproduct/:productId", Controller.oneProduct);
+
+////////////////
 router.use('api/v1/api-docs', swaggerUi.serve);
 router.get('api/v1/api-docs', swaggerUi.setup(swaggerSpec));
 

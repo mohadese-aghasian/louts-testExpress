@@ -12,6 +12,10 @@ const swaggerDefinition = {
       url: 'http://localhost:3000/api/v1/',
       description: 'Development server',
     },
+    {
+      url: 'http://localhost:3000/api/v2/',
+      description: 'Development server',
+    }
   ],
   components: {
     securitySchemes: {
