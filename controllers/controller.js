@@ -4,7 +4,8 @@ const authenticateJWT = require('../middleware/authMiddleware');
 const db = require("../models/index");
 const {  where } = require('sequelize');
 const Joi = require("joi");
-const productCoverUpload= require("../middleware/productCoverMilddleware");
+const path = require('path');
+const sharp = require('sharp');
 
 
 
@@ -198,38 +199,41 @@ exports.products=async(req, res)=>{
 }
 
 exports.addProduct=async(req, res)=>{
-    const {title, desctription, price}=req.body;
+    const {title, description, price}=req.body;
 
-    productCoverUpload(req, res, async (err) => {
-        if (err) {
-          return res.status(400).json({ message: err.message });
-        }
-        if (!req.file) {
-          return res.status(400).json({ message: 'Please upload a file.' });
-        }
-    
-        // Process the image with Sharp
+    console.log(req.file);
+    console.log(req.body);
+
         try {
-          const processedImagePath = path.join(__dirname, 'images/covers/', `productcover-${Date.now()}.jpg`);
+          const processedImagePath = path.join(__dirname, '../images/covers', `productcover-${Date.now()}.jpg`);
     
           // Resize the image to 500x500, convert to JPEG format, and compress it
           await sharp(req.file.buffer)
             .resize(200, 200)
             .jpeg({ quality: 80 }) // Set JPEG quality to 80
             .toFile(processedImagePath); // Save the processed image
+
+            const newproduct = await db.Products.create({
+                title: title,
+                description: description, 
+                price: price,
+                cover:processedImagePath,
+            });
+
     
-          res.json({ message: 'File uploaded and processed successfully', file: processedImagePath });
+          res.json({ message: 'File uploaded and processed successfully', file: processedImagePath, newproduct });
         } catch (error) {
           res.status(500).json({ message: 'Failed to process the image.', error: error.message });
-        }
-      });
+    };
 }
 
 exports.addFavourite=async(req, res)=>{
     const {productId} = req.body;
     const userId = req.user.userId;
 
+    
     try{
+
         const favourite = await db.FavouriteProducts.findOne({
             where:{
                 productId:productId
@@ -239,13 +243,14 @@ exports.addFavourite=async(req, res)=>{
             await favourite.destroy();
             res.status(202).json({message:"removed from favourite."});
         }else{
-            const addfavourite =await db.addFavourite.create({
+            const addfavourite =await db.FavouriteProducts.create({
                 productId:productId,
                 userId:userId
             });
             res.status(201).json({message:"added to favourite!",result:addfavourite});
         }
     }catch(err){
+        console.log(err.message);
         res.status(500).json({message:err.message});
     }
 }

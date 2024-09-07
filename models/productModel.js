@@ -2,15 +2,15 @@ module.exports = (sequelize, DataTypes) =>{
     const Products =sequelize.define('Products', {
         title:{
             type:DataTypes.STRING,
-            allowNull:false,
+            allowNull:true,
         },
         description:{
             type:DataTypes.STRING, 
-            allowNull:false,
+            allowNull:true,
         },
         price:{
             type:DataTypes.FLOAT,
-            allowNull:false,
+            allowNull:true,
         },
         cover:{
             type:DataTypes.STRING,

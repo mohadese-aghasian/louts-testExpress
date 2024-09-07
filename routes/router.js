@@ -199,7 +199,7 @@ const swaggerSpec = require('../swaggerConfig');
  *       401:
  *         description: Invalid credentials
  */
-////////////////
+//////////////////////////////////////
 /**
  * @swagger
  * /products:
@@ -287,6 +287,75 @@ const swaggerSpec = require('../swaggerConfig');
  *                   example: Error message
  */
 
+/**
+ * @swagger
+ * /addproduct:
+ *   post:
+ *     summary: Add a new product with an image
+ *     description: Uploads an image for the product, processes it, and saves the product details to the database.
+ *     tags:
+ *       - Products
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: The title of the product
+ *               description:
+ *                 type: string
+ *                 description: The description of the product
+ *               price:
+ *                 type: number
+ *                 format: float
+ *                 description: The price of the product
+ *               cover:
+ *                 type: string
+ *                 format: binary
+ *                 description: The cover image of the product
+ *     responses:
+ *       200:
+ *         description: Product added successfully with image processing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'File uploaded and processed successfully'
+ *                 file:
+ *                   type: string
+ *                   description: The path to the processed image file
+ *       400:
+ *         description: Bad request if no file is uploaded or other validation errors occur
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'Please upload a file.'
+ *       500:
+ *         description: Internal server error if image processing fails
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'Failed to process the image.'
+ *                 error:
+ *                   type: string
+ *                   description: Detailed error message
+ */
+
+
 ////////////
 router.post("/login", Controller.login);
 router.post("/register", Controller.register);
@@ -298,8 +367,11 @@ router.post('/blogs/like/:blogId', authenticateJWT, Controller.likeBlog);
 router.get("/blogs/oneblog/", authenticateJWT, Controller.getSingleBlog);
 
 /////////////////
+const uploadMiddleware= require("../middleware/productCoverMilddleware");
+
+
 router.get("/products", Controller.products);
-router.post("/addproduct", Controller.addProduct);
+router.post("/addproduct", uploadMiddleware, Controller.addProduct);
 router.post("products/addfavourite", authenticateJWT, Controller.addFavourite);
 router.get("products/oneproduct/:productId", Controller.oneProduct);
 

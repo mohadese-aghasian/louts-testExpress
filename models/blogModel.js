@@ -11,7 +11,17 @@ module.exports = (sequelize, DataTypes) =>{
         likeNum:{
             type:DataTypes.INTEGER, 
             defaultValue:0,
-        }, 
+        },
+        authorId: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          references: {
+            model: 'Users',   
+            key: 'id',
+          },
+          onUpdate: 'CASCADE',
+          onDelete: 'CASCADE',
+        },
     });
 
     Blogs.associate=(models)=>{

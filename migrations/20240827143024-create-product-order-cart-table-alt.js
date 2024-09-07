@@ -27,9 +27,17 @@ module.exports = {
             type:Sequelize.STRING,
             allowNull:true,
         },
-    },{
-        timestamps: true,
-     });
+        createdAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
+        },
+        updatedAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
+        }
+    });
 
     await queryInterface.createTable("ProductGallery", {
         id: {
@@ -49,10 +57,18 @@ module.exports = {
         path:{
             type:Sequelize.STRING,
             allowNull:false,
+        },
+        createdAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
+        },
+        updatedAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
         }
-    },{
-        timestamps: true,
-     });
+    });
 
     await queryInterface.createTable("Carts", {
         id: {
@@ -72,6 +88,16 @@ module.exports = {
             type:Sequelize.INTEGER,
             defaultValue:0
         },
+        createdAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
+        },
+        updatedAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
+        }
     });
    
     await queryInterface.createTable("CartItems", {
@@ -100,10 +126,18 @@ module.exports = {
         quantity:{
             type:Sequelize.INTEGER,
             defaultValue:1,
+        },
+        createdAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
+        },
+        updatedAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
         }
-    },{
-        timestamps: true,
-     });
+    });
 
     await queryInterface.createTable("Orders", {
         id: {
@@ -124,9 +158,17 @@ module.exports = {
             type:Sequelize.INTEGER,
             defaultValue:0
         },
-    },{
-        timestamps: true,
-     });
+        createdAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
+        },
+        updatedAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
+        }
+    });
 
     await queryInterface.createTable("OrderItems", {
         id: {
@@ -154,10 +196,18 @@ module.exports = {
     quantity:{
         type:Sequelize.INTEGER,
         defaultValue:1,
+    },
+    createdAt: {
+      allowNull: false,
+      type: Sequelize.DATE,
+      
+    },
+    updatedAt: {
+      allowNull: false,
+      type: Sequelize.DATE,
+      
     }
-    },{
-        timestamps: true,
-     });
+    });
     await queryInterface.createTable("FavouriteProducts", {
         id: {
             allowNull: false,
@@ -181,8 +231,16 @@ module.exports = {
                 key:"id"
             }
         },
-     },{
-        timestamps: true,
+        createdAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
+        },
+        updatedAt: {
+          allowNull: false,
+          type: Sequelize.DATE,
+          
+        }
      });
   },
 
@@ -194,9 +252,7 @@ module.exports = {
     await queryInterface.dropTable("Carts");
     await queryInterface.dropTable("ProductGallery");
     await queryInterface.dropTable("Products");
-   
-   
-  
+    
    
   }
 };
