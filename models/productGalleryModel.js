@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) =>{
         }
     });
     ProductGalleries.associate=(models)=>{
-        // ProductGallery.belongsToMany(models.Products, {foreignKey:"productId"});
+        ProductGalleries.belongsTo(models.Products, {foreignKey:"productId"});
     }
     return ProductGalleries;
     

@@ -292,8 +292,101 @@ const swaggerSpec = require('../swaggerConfig');
  * @swagger
  * /addproduct:
  *   post:
- *     summary: Add a new product with an image
- *     description: Uploads an image for the product, processes it, and saves the product details to the database.
+ *     summary: Add a new product
+ *     description: Creates a new product in the database with the provided details, including a reference to a cover image.
+ *     tags:
+ *       - Products
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: The title of the product.
+ *                 example: 'Sample Product'
+ *               description:
+ *                 type: string
+ *                 description: A detailed description of the product.
+ *                 example: 'This is a sample product description.'
+ *               price:
+ *                 type: number
+ *                 format: float
+ *                 description: The price of the product.
+ *                 example: 99.99
+ *               coverId:
+ *                 type: integer
+ *                 description: The ID of the cover image associated with the product.
+ *                 example: 1
+ *     responses:
+ *       201:
+ *         description: Product created successfully with the provided details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'Product created successfully'
+ *                 newproduct:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       description: The ID of the newly created product.
+ *                       example: 1
+ *                     title:
+ *                       type: string
+ *                       description: The title of the product.
+ *                       example: 'Sample Product'
+ *                     description:
+ *                       type: string
+ *                       description: The description of the product.
+ *                       example: 'This is a sample product description.'
+ *                     price:
+ *                       type: number
+ *                       format: float
+ *                       description: The price of the product.
+ *                       example: 99.99
+ *                     coverId:
+ *                       type: integer
+ *                       description: The ID of the cover image associated with the product.
+ *                       example: 1
+ *       400:
+ *         description: Bad request if required fields are missing or validation fails.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'Bad request: Missing required fields or validation failed.'
+ *       500:
+ *         description: Internal server error if the product creation fails.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'Failed to create the product.'
+ *                 error:
+ *                   type: string
+ *                   description: Detailed error message.
+ *                   example: 'Database error or other issue.'
+ */
+
+/**
+ * @swagger
+ * /addproduct/cover:
+ *   post:
+ *     summary: Uploads a cover image for a product
+ *     description: Processes an uploaded image and creates a new ProductCover entry in the database with the image name.
  *     tags:
  *       - Products
  *     requestBody:
@@ -303,58 +396,29 @@ const swaggerSpec = require('../swaggerConfig');
  *           schema:
  *             type: object
  *             properties:
- *               title:
- *                 type: string
- *                 description: The title of the product
- *               description:
- *                 type: string
- *                 description: The description of the product
- *               price:
- *                 type: number
- *                 format: float
- *                 description: The price of the product
  *               cover:
  *                 type: string
  *                 format: binary
- *                 description: The cover image of the product
+ *                 description: The image file to be uploaded.
  *     responses:
- *       200:
- *         description: Product added successfully with image processing
+ *       '201':
+ *         description: Successfully uploaded the cover image and created a new ProductCover entry.
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 message:
- *                   type: string
- *                   example: 'File uploaded and processed successfully'
- *                 file:
- *                   type: string
- *                   description: The path to the processed image file
- *       400:
- *         description: Bad request if no file is uploaded or other validation errors occur
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: 'Please upload a file.'
- *       500:
- *         description: Internal server error if image processing fails
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: 'Failed to process the image.'
- *                 error:
- *                   type: string
- *                   description: Detailed error message
+ *                 id:
+ *                   type: integer
+ *                   description: The ID of the newly created ProductCover.
+ *       '400':
+ *         description: Bad request, no file uploaded or invalid file format.
+ *       '500':
+ *         description: Internal server error.
+ *     security:
+ *       - bearerAuth: []  # Adjust or remove if you have authentication
  */
+
 
 
 ////////////
@@ -369,10 +433,12 @@ router.get("/blogs/oneblog/", authenticateJWT, Controller.getSingleBlog);
 
 /////////////////
 const uploadMiddleware= require("../middleware/productCoverMilddleware");
+const { ro } = require('@faker-js/faker');
 
 
 router.get("/products", Controller.products);
-router.post("/addproduct", uploadMiddleware, Controller.addProduct);
+router.post("/addproduct",  Controller.addProduct);
+router.post("/addproduct/cover", uploadMiddleware, Controller.uploadCover);
 router.post("products/addfavourite/:productId", authenticateJWT, Controller.addFavourite);
 router.get("products/oneproduct/:productId", Controller.oneProduct);
 

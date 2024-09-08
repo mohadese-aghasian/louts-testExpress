@@ -198,30 +198,47 @@ exports.products=async(req, res)=>{
     }
 }
 
-exports.addProduct=async(req, res)=>{
-    const {title, description, price}=req.body;
+async function ProcessImage(req, imageName){
+    const processedImagePath = path.join(__dirname, '../images/covers', imageName);
 
-    console.log(req.file);
+    await sharp(req.file.buffer)
+        .resize(200, 200)
+        .jpeg({ quality: 80 }) // Set JPEG quality to 80
+        .toFile(processedImagePath); // Save the processed image
+
+}
+exports.uploadCover=async(req, res)=>{
+    try{
+        const imageName=`productcover-${Date.now()}.webp`;
+
+        await ProcessImage(req, imageName);
+
+        const newcover= await db.ProductCovers.create({
+            name:imageName,
+        });
+
+        console.log(newcover);
+        res.status(201).json({coverId:newcover.id});
+
+    }catch(err){
+
+    }
+}
+exports.addProduct=async(req, res)=>{
+    const {title, description, price, coverId}=req.body;
     console.log(req.body);
 
         try {
-          const processedImagePath = path.join(__dirname, '../images/covers', `productcover-${Date.now()}.jpg`);
+        
+        const newproduct = await db.Products.create({
+            title: title,
+            description: description, 
+            price: price,
+            coverId:coverId
+        });
+        
     
-          // Resize the image to 500x500, convert to JPEG format, and compress it
-          await sharp(req.file.buffer)
-            .resize(200, 200)
-            .jpeg({ quality: 80 }) // Set JPEG quality to 80
-            .toFile(processedImagePath); // Save the processed image
-
-            const newproduct = await db.Products.create({
-                title: title,
-                description: description, 
-                price: price,
-                cover:processedImagePath,
-            });
-
-    
-          res.json({ message: 'File uploaded and processed successfully', file: processedImagePath, newproduct });
+        res.status(201).json({ message: 'File uploaded and processed successfully', newproduct });
         } catch (error) {
           res.status(500).json({ message: 'Failed to process the image.', error: error.message });
     };
@@ -250,6 +267,10 @@ exports.addFavourite=async(req, res)=>{
             await favourite.destroy();
             res.status(202).json({message:"removed from favourite."});
         }else{
+            const product=await db.Products.findOne({where:{id:productId}});
+            if(!product){
+                res.status(404).json({message:"no product was found for this ID"});
+            }
             const addfavourite =await db.FavouriteProducts.create({
                 productId:productId,
                 userId:userId
