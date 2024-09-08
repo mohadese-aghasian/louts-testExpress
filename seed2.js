@@ -15,22 +15,22 @@ const { options } = require('joi');
             });
             users.push(user);
         }
-        // const blogs = [];
-        // for (let i = 0; i < 100; i++) {
-        //     const blog = await db.Blogs.create({
-        //         title: faker.lorem.sentence(),
-        //         content: faker.lorem.paragraphs(),
-        //         likeNum: faker.number.int({ min: 0, max: 99 }),
-        //         userId: users[faker.number.int({ min: 0, max: 99 })].id // Assign blog to a random user
-        //     });
-        //     blogs.push(blog);
-        // }
-        // for (let i = 0; i < 100; i++) {
-        //     await db.Likes.create({
-        //         blogId: blogs[faker.number.int({ min: 0, max: 99 })].id, // Assign like to a random blog
-        //         userId: users[faker.number.int({ min: 0, max: 99 })].id  // Assign like to a random user
-        //     });
-        // }
+        const blogs = [];
+        for (let i = 0; i < 100; i++) {
+            const blog = await db.Blogs.create({
+                title: faker.lorem.sentence(),
+                content: faker.lorem.paragraphs(),
+                likeNum: faker.number.int({ min: 0, max: 99 }),
+                authorId: users[faker.number.int({ min: 0, max: 99 })].id // Assign blog to a random user
+            });
+            blogs.push(blog);
+        }
+        for (let i = 0; i < 100; i++) {
+            await db.Likes.create({
+                blogId: blogs[faker.number.int({ min: 0, max: 99 })].id, // Assign like to a random blog
+                userId: users[faker.number.int({ min: 0, max: 99 })].id  // Assign like to a random user
+            });
+        }
         var products=[];
         for (let i =0; i<100; i++){
             const product= await db.Products.create({

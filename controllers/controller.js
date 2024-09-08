@@ -57,9 +57,9 @@ exports.register=async(req, res)=>{
 
 exports.createBlog=async (req, res) => {
     const { title, content } = req.body;
-
+    console.log(req.user);
     try {
-        const blog = await db.Blogs.create({ title, content, userId: req.user.userId });
+        const blog = await db.Blogs.create({ title, content, authorId: req.user.userId });
         res.status(201).json(blog);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -98,7 +98,7 @@ exports.getBlogs=async(req, res)=>{
         offset:offsetClause,
         limit:limitClause,
         order: [[orderColumn, orderDirection]],
-        include: [{ model: db.Users , as: 'author', attributes: ['username'] }]
+        // include: [{ model: db.Users , as: 'authorId', attributes: ['username'] }]
     });
     res.json(blogs);
     }catch(err){
@@ -228,9 +228,16 @@ exports.addProduct=async(req, res)=>{
 }
 
 exports.addFavourite=async(req, res)=>{
-    const {productId} = req.body;
+    const {productId} = req.params;
     const userId = req.user.userId;
 
+    const schema = Joi.object({
+        id: Joi.number().integer().required(),
+    });
+    const {error} = schema.validate({ id: productId });
+    if(error){
+        return res.status(400).json({message:"Invalid format, id must be an integer!"});
+    }
     
     try{
 

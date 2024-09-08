@@ -235,22 +235,21 @@ const swaggerSpec = require('../swaggerConfig');
  */
 /**
  * @swagger
- * /products/addfavourite:
+ * /products/addfavourite/{productId}:
  *   post:
  *     summary: Add or remove a product from the user's favourites
  *     description: Toggles the favourite status of a product for the authenticated user. If the product is already in favourites, it will be removed; otherwise, it will be added.
  *     tags:
  *       - Products
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               productId:
- *                 type: integer
- *                 description: The ID of the product to add or remove from favourites
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the product 
  *     responses:
  *       201:
  *         description: Product added to favourites successfully
@@ -285,6 +284,8 @@ const swaggerSpec = require('../swaggerConfig');
  *                 message:
  *                   type: string
  *                   example: Error message
+ *       401:
+ *         description: Unauthorized
  */
 
 /**
@@ -372,7 +373,7 @@ const uploadMiddleware= require("../middleware/productCoverMilddleware");
 
 router.get("/products", Controller.products);
 router.post("/addproduct", uploadMiddleware, Controller.addProduct);
-router.post("products/addfavourite", authenticateJWT, Controller.addFavourite);
+router.post("products/addfavourite/:productId", authenticateJWT, Controller.addFavourite);
 router.get("products/oneproduct/:productId", Controller.oneProduct);
 
 ////////////////

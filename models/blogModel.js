@@ -1,12 +1,14 @@
+const { truncate } = require("fs");
+
 module.exports = (sequelize, DataTypes) =>{
     const Blogs = sequelize.define('Blogs', {
         title: {
             type: DataTypes.STRING,
-            allowNull: false
+            allowNull: true
         },
         content: {
             type: DataTypes.TEXT,
-            allowNull: false
+            allowNull: true
         },
         likeNum:{
             type:DataTypes.INTEGER, 
@@ -14,7 +16,7 @@ module.exports = (sequelize, DataTypes) =>{
         },
         authorId: {
           type: DataTypes.INTEGER,
-          allowNull: false,
+          allowNull: true,
           references: {
             model: 'Users',   
             key: 'id',
@@ -25,7 +27,7 @@ module.exports = (sequelize, DataTypes) =>{
     });
 
     Blogs.associate=(models)=>{
-        Blogs.belongsTo(models.Users, { foreignKey: 'userId', as: 'author' });
+        Blogs.belongsTo(models.Users, { foreignKey: 'authorId' });
     };
 
     return Blogs;
