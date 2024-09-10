@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) =>{
         }, 
         coverId:{
             type:DataTypes.INTEGER,
-            allowNull:true,
+            allowNull:true, 
             references:{
                 model:"ProductCovers",
                 key:"id",

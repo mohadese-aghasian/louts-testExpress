@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authenticateJWT = require('../middleware/authMiddleware');
+const uploadMiddleware= require("../middleware/productCoverMilddleware");
 const Controller = require('../controllers/controller');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('../swaggerConfig');
@@ -81,14 +82,41 @@ const swaggerSpec = require('../swaggerConfig');
  * @swagger
  * /blogs:
  *   get:
- *     summary: Get all blogs
- *     description: Retrieves a list of all blogs.
+ *     summary: Retrieve a list of blogs
+ *     description: Fetches a list of blogs with optional pagination, sorting, and filtering.
  *     tags: [Blogs]
- *     security:
- *       - bearerAuth: []
+ *     parameters:
+ *       - name: limit
+ *         in: query
+ *         description: Number of blogs to retrieve. If not provided, returns all blogs.
+ *         required: false
+ *         schema:
+ *           type: integer
+ *       - name: start
+ *         in: query
+ *         description: The starting point (offset) for pagination.
+ *         required: false
+ *         schema:
+ *           type: integer
+ *       - name: orderby
+ *         in: query
+ *         description: The column by which to sort the results. Defaults to 'id'.
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [title, createdAt, updatedAt, content, id, likeNum, userId]
+ *           example: createdAt
+ *       - name: orderdir
+ *         in: query
+ *         description: The direction to sort the results. Defaults to 'ASC'. 
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [ASC, DESC]
+ *           example: DESC
  *     responses:
  *       200:
- *         description: A list of blogs
+ *         description: A list of blogs.
  *         content:
  *           application/json:
  *             schema:
@@ -98,13 +126,43 @@ const swaggerSpec = require('../swaggerConfig');
  *                 properties:
  *                   id:
  *                     type: integer
+ *                     example: 1
  *                   title:
  *                     type: string
+ *                     example: "Blog Title"
  *                   content:
  *                     type: string
- *       401:
- *         description: Unauthorized
+ *                     example: "Blog content here..."
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     example: "2024-01-01T00:00:00Z"
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     example: "2024-01-01T00:00:00Z"
+ *       400:
+ *         description: Invalid query parameters.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid format for parameters!"
+ *       500:
+ *         description: Server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
  */
+
 /**
  * @swagger
  * /blogs/like/{blogId}:
@@ -199,16 +257,41 @@ const swaggerSpec = require('../swaggerConfig');
  *       401:
  *         description: Invalid credentials
  */
-//////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @swagger
  * /products:
  *   get:
- *     summary: Get all Products
- *     description: Retrieves a list of all products.
+ *     summary: Get a list of products
+ *     description: Retrieves a list of products with optional pagination, sorting, and filtering.
  *     tags: [Products]
- *     security:
- *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: The number of products to return.
+ *       - in: query
+ *         name: start
+ *         schema:
+ *           type: integer
+ *         description: The starting index of the products to return.
+ *       - in: query
+ *         name: orderby
+ *         schema:
+ *           type: string
+ *           enum: [title, createdAt, updatedAt, id, price, description]
+ *           default: id
+ *           example: id
+ *         description: The column by which to sort the products.
+ *       - in: query
+ *         name: orderdir
+ *         schema:
+ *           type: string
+ *           enum: [ASC, DESC]
+ *           default: ASC
+ *           example: ASC
+ *         description: The direction in which to sort the products (ascending or descending).
  *     responses:
  *       200:
  *         description: A list of products
@@ -221,17 +304,28 @@ const swaggerSpec = require('../swaggerConfig');
  *                 properties:
  *                   id:
  *                     type: integer
+ *                     description: The unique identifier of the product.
  *                   title:
  *                     type: string
+ *                     description: The title of the product.
  *                   description:
  *                     type: string
+ *                     description: The content or description of the product.
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The date and time when the product was created.
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The date and time when the product was last updated.
  *                   price:
  *                     type: integer
- *                   cover:
- *                     type: string
- *
+ *                     description: price of product.
+ *       400:
+ *         description: Bad request - Invalid format for query parameters
  *       500:
- *         description: Server Error
+ *         description: Internal server error - An error occurred while retrieving the products
  */
 /**
  * @swagger
@@ -248,7 +342,7 @@ const swaggerSpec = require('../swaggerConfig');
  *         name: productId
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *         description: The ID of the product 
  *     responses:
  *       201:
@@ -399,7 +493,7 @@ const swaggerSpec = require('../swaggerConfig');
  *               cover:
  *                 type: string
  *                 format: binary
- *                 description: The image file to be uploaded.
+ *                 description: The cover image file (JPEG, JPG, PNG, GIF)
  *     responses:
  *       '201':
  *         description: Successfully uploaded the cover image and created a new ProductCover entry.
@@ -418,8 +512,162 @@ const swaggerSpec = require('../swaggerConfig');
  *     security:
  *       - bearerAuth: []  # Adjust or remove if you have authentication
  */
+/**
+ * @swagger
+ * /products/oneproduct/{productId}:
+ *   get:
+ *     summary: Retrieve a specific product by its ID
+ *     description: Fetches the details of a single product using its unique ID.
+ *     tags:
+ *       - Products
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string  # Assuming ID is passed as a string of digits
+ *         description: The unique ID of the product to retrieve
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the product
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   description: The unique identifier of the product
+ *                 name:
+ *                   type: string
+ *                   description: The name of the product
+ *                 description:
+ *                   type: string
+ *                   description: A detailed description of the product
+ *                 price:
+ *                   type: number
+ *                   format: float
+ *                   description: The price of the product
+ *                 # Include any other relevant product properties
+ *               example:
+ *                 id: 1
+ *                 name: Example Product
+ *                 description: A detailed description of the example product.
+ *                 price: 29.99
+ *       400:
+ *         description: Bad request due to invalid product ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid format, id must be an integer!
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Error message
+ */
+/**
+ * @swagger
+ * /products/favourites:
+ *   get:
+ *     summary: Get user's favourite products
+ *     description: Retrieves a list of favourite products for the authenticated user.
+ *     tags:
+ *       - Products
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of favourite products for the user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The unique identifier of the favourite product.
+ *                   userId:
+ *                     type: integer
+ *                     description: The user ID associated with the favourite product.
+ *                   productId:
+ *                     type: integer
+ *                     description: The product ID of the favourite product.
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The date and time when the favourite was created.
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The date and time when the favourite was last updated.
+ *       401:
+ *         description: Unauthorized - User is not authenticated
+ *       500:
+ *         description: Internal server error - An error occurred while retrieving the favourites.
+ */
 
-
+/**
+ * @swagger
+ * /products/search:
+ *   get:
+ *     summary: Search for products by title or description
+ *     description: Retrieves a list of products where either the title or description contains the search terms provided in the query parameters.
+ *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: title
+ *         schema:
+ *           type: string
+ *         description: The title to search for within the product titles. Supports substring matching.
+ *       - in: query
+ *         name: description
+ *         schema:
+ *           type: string
+ *         description: The description to search for within the product descriptions. Supports substring matching.
+ *     responses:
+ *       200:
+ *         description: A list of products matching the search criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The unique identifier of the product.
+ *                   title:
+ *                     type: string
+ *                     description: The title of the product.
+ *                   description:
+ *                     type: string
+ *                     description: The description of the product.
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The date and time when the product was created.
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The date and time when the product was last updated.
+ *       400:
+ *         description: Bad Request - The query parameters provided are invalid.
+ *       500:
+ *         description: Internal Server Error - An error occurred while retrieving products.
+ */
 
 ////////////
 router.post("/login", Controller.login);
@@ -432,15 +680,14 @@ router.post('/blogs/like/:blogId', authenticateJWT, Controller.likeBlog);
 router.get("/blogs/oneblog/", authenticateJWT, Controller.getSingleBlog);
 
 /////////////////
-const uploadMiddleware= require("../middleware/productCoverMilddleware");
-const { ro } = require('@faker-js/faker');
-
 
 router.get("/products", Controller.products);
 router.post("/addproduct",  Controller.addProduct);
 router.post("/addproduct/cover", uploadMiddleware, Controller.uploadCover);
-router.post("products/addfavourite/:productId", authenticateJWT, Controller.addFavourite);
-router.get("products/oneproduct/:productId", Controller.oneProduct);
+router.post("/products/addfavourite/:productId", authenticateJWT, Controller.addFavourite);
+router.get("/products/oneproduct/:productId", Controller.oneProduct);
+router.get("/products/favourites", authenticateJWT, Controller.getFavourites);
+router.get("/products/search", Controller.searchProducts);
 
 ////////////////
 router.use('api/v1/api-docs', swaggerUi.serve);
