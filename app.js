@@ -1,6 +1,8 @@
 const express = require("express");
 const bodyparser= require('body-parser');
 const blogrouter=require("./routes/router");
+const productRouter=require("./routes/productRouter");
+const userRouter=require("./routes/userRouter");
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swaggerConfig');
 const cors= require("cors");
@@ -33,7 +35,9 @@ app.get("/", (req, res)=>{
 });
 
 //app.use(authenticateJWT);
-app.use('/api/v1', blogrouter);
+app.use('/api/v2', blogrouter);
+app.use('/api/v3', productRouter);
+app.use('/api/v1', userRouter);
 
 
 
