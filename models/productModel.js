@@ -1,40 +1,91 @@
-module.exports = (sequelize, DataTypes) =>{
-    const Products =sequelize.define('Products', {
-        title:{
-            type:DataTypes.STRING,
-            allowNull:false,
-        },
-        description:{
-            type:DataTypes.STRING, 
-            allowNull:true,
-        },
-        price:{
-            type:DataTypes.FLOAT,
-            allowNull:false,
-        }, 
-        coverId:{
-            type:DataTypes.INTEGER,
-            allowNull:true, 
-            references:{
-                model:"ProductCovers",
-                key:"id",
-      },
-        }
+// module.exports = (sequelize, DataTypes) =>{
+//     const Products =sequelize.define('Products', {
+//         title:{
+//             type:DataTypes.STRING,
+//             allowNull:false,
+//         },
+//         description:{
+//             type:DataTypes.STRING, 
+//             allowNull:true,
+//         },
+//         price:{
+//             type:DataTypes.FLOAT,
+//             allowNull:false,
+//         }, 
+//         coverId:{
+//             type:DataTypes.INTEGER,
+//             allowNull:true, 
+//             references:{
+//                 model:"ProductCovers",
+//                 key:"id",
+//             },
+//         },
         
+//     });
+
+//     Products.associate=(models)=>{
+//         Products.hasMany(models.ProductGalleries, {
+//         foreignKey: 'productId',
+//         as: 'galleries'  // Optional alias for easier querying  
+//     });
+//         Products.belongsTo(models.ProductCovers,{
+//         foreignKey:'coverId',
+//         as:'cover'
+//     });
+//     Products.belongsToMany(models.Categories, {
+//         through: models.ProductCategories,
+//         foreignKey: 'productId',
+//         otherKey: 'categoryId',
+//         as: 'categories'
+//     });
+    
+//         }
+//         return Products;
+//     }
+module.exports = (sequelize, DataTypes) => {
+    const Product = sequelize.define('Products', {
+      id: {
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        type: DataTypes.INTEGER,
+      },
+      title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      description: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      price: {
+        type: DataTypes.FLOAT,
+        allowNull: false,
+      },
+      coverId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'ProductCovers',
+          key: 'id',
+        },
+      },
     });
-    Products.associate=(models)=>{ Products.hasMany(models.ProductGalleries, {
+  
+    Product.associate = (models) => {
+      Product.belongsToMany(models.Categories, {
+        through: models.ProductCategories,
         foreignKey: 'productId',
-        as: 'galleries'  // Optional alias for easier querying
-    });
-    }
-    Products.associate=(models)=>{
-        Products.belongsTo(models.ProductCovers,{
-            foreignKey:'coverId',
-            as:'cover'
-        });
-    }
-    return Products;
-     
-}
-
-
+        otherKey: 'categoryId',
+        as: 'categories',
+      });
+  
+      Product.belongsTo(models.ProductCovers, {
+        foreignKey: 'coverId',
+        as: 'cover',
+      });
+    };
+  
+    return Product;
+  };
+  

@@ -6,7 +6,7 @@ const productController = require('../controllers/productController');
 const userController=require("../controllers/userController");
 const blogController=require("../controllers/blogController");
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('../config/swaggerConfig');
+const swaggerSpec = require('../swaggerConfig');
 
 //////////////////////////////////
 /**

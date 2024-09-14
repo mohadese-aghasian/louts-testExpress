@@ -35,9 +35,9 @@ app.get("/", (req, res)=>{
 });
 
 //app.use(authenticateJWT);
+app.use('/api/v1', userRouter);
 app.use('/api/v2', blogrouter);
 app.use('/api/v3', productRouter);
-app.use('/api/v1', userRouter);
 
 
 

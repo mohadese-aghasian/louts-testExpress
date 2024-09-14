@@ -72,10 +72,10 @@ module.exports = {
         },
         allowNull:false
       },
-      categoryId:{
+      subCategoryId:{
         type:Sequelize.INTEGER, 
         references:{
-          model:"Categories",
+          model:"SubCategories",
           key:"id"
         },
         allowNull:false
@@ -90,7 +90,7 @@ module.exports = {
         type: Sequelize.DATE,
         
       }
-    })
+    });
   },
 
   async down (queryInterface, Sequelize) {

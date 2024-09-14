@@ -4,7 +4,7 @@ const authenticateJWT = require('../middleware/authMiddleware');
 const uploadMiddleware= require("../middleware/productCoverMilddleware");
 const blogController=require("../controllers/blogController");
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('../config/swaggerConfig');
+const swaggerSpec = require('../swaggerConfig');
 
 /////////////
 

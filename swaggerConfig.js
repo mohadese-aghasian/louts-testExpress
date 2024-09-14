@@ -3,9 +3,9 @@ const swaggerJSDoc = require('swagger-jsdoc');
 const swaggerDefinition = {
   openapi: '3.0.0',
   info: {
-    title: 'Blog API',
+    title: 'TEST API',
     version: '1.0.0',
-    description: 'Simple Blog API',     
+    description: 'Simple TEST API',     
   },
   servers: [
     {
@@ -40,9 +40,9 @@ const swaggerDefinition = {
 const options = {
   swaggerDefinition,
   // paths to files containing OpenAPI definitions
-  apis: ['../routes/productRouter.js',
-  '../routes/userRouter.js',
-  '../routes/router.js',],
+  apis: ['./routes/productRouter.js',
+  './routes/userRouter.js',
+  './routes/router.js',],
    
 };
 

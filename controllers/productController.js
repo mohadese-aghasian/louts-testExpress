@@ -67,7 +67,24 @@ exports.products=async(req, res)=>{
                         [Op.regexp]: searchquery
                     }}
                 ]
-            }
+            },
+            include:[{
+                model: db.Categories,
+                required: false,
+                as: 'categories',
+                include: [
+                    {
+                      model: db.Categories,
+                      as: 'parent',
+                      include: [
+                        {
+                          model: db.Categories,
+                          as: 'parent', 
+                          required: false,
+                        },
+                      ],
+                    }],
+                }],
         });
         return res.json(products);
     }catch(err){
@@ -194,6 +211,23 @@ exports.oneProduct=async(req, res)=>{
     try{
         const product= await db.Products.findOne({
             where:{id: parseInt(productId, 10)},
+            include:[{
+                model: db.Categories,
+                required: false,
+                as: 'categories',
+                include: [
+                    {
+                      model: db.Categories,
+                      as: 'parent',
+                      include: [
+                        {
+                          model: db.Categories,
+                          as: 'parent', 
+                          required: false,
+                        },
+                      ],
+                    }],
+                }],
         });
         if(!product){
             return res.json({message:"no product was found for this ID"})
