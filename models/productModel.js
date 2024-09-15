@@ -84,8 +84,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'coverId',
         as: 'cover',
       });
+
+      Product.hasMany(models.ProductCategoryPaths, { foreignKey: 'productId' });
     };
-  
+
     return Product;
   };
   

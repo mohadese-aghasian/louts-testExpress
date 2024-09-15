@@ -11,6 +11,92 @@ const swaggerSpec = require('../swaggerConfig');
 //////////////////////////////////
 /**
  * @swagger
+ * /products2:
+ *   get:
+ *     summary: Get a list of products
+ *     description: Retrieves a list of products with optional pagination, sorting, and filtering.
+ *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: searchtext
+ *         schema:
+ *           type: string
+ *         description: the text for search in products.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: The number of products to return.
+ *       - in: query
+ *         name: start
+ *         schema:
+ *           type: integer
+ *         description: The starting index of the products to return.
+ *       - in: query
+ *         name: orderby
+ *         schema:
+ *           type: string
+ *           enum: [title, createdAt, updatedAt, id, price, description]
+ *           default: id
+ *           example: id
+ *         description: The column by which to sort the products.
+ *       - in: query
+ *         name: orderdir
+ *         schema:
+ *           type: string
+ *           enum: [ASC, DESC]
+ *           default: ASC
+ *           example: ASC
+ *         description: The direction in which to sort the products (ascending or descending).
+*       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: The category to filter products by. Must be a valid category path.
+ *       - in: query
+ *         name: exclusive
+ *         schema:
+ *           type: string
+ *           enum: [1, ""]
+ *         required: false
+ *         description: When set to '1', filters products whose category path ends with the category path. If not provided, defaults to an empty string.
+ *     responses:
+ *       200:
+ *         description: A list of products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The unique identifier of the product.
+ *                   title:
+ *                     type: string
+ *                     description: The title of the product.
+ *                   description:
+ *                     type: string
+ *                     description: The content or description of the product.
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The date and time when the product was created.
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The date and time when the product was last updated.
+ *                   price:
+ *                     type: integer
+ *                     description: price of product.
+ *       400:
+ *         description: Bad request - Invalid format for query parameters
+ *       500:
+ *         description: Internal server error - An error occurred while retrieving the products
+ */
+/**
+ * @swagger
  * /products:
  *   get:
  *     summary: Get a list of products
@@ -424,7 +510,251 @@ const swaggerSpec = require('../swaggerConfig');
  *       500:
  *         description: Internal Server Error - An error occurred while retrieving products.
  */
-
+/**
+ * @swagger
+ * /menu:
+ *   get:
+ *     summary: Retrieve the hierarchical structure of categories
+ *     description: Fetches all categories and organizes them into a hierarchical structure based on their paths.
+ *     responses:
+ *       200:
+ *         description: A hierarchical structure of categories organized by parent-child relationships
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 rootCategories:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                         description: The name of the category
+ *                       children:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             name:
+ *                               type: string
+ *                               description: The name of the subcategory
+ *                             children:
+ *                               type: array
+ *                               items:
+ *                                 type: object
+ *                                 properties:
+ *                                   name:
+ *                                     type: string
+ *                                     description: The name of the sub-subcategory
+ *                                   children:
+ *                                     type: array
+ *                                     items:
+ *                                       type: object
+ *                                       properties:
+ *                                         name:
+ *                                           type: string
+ *                                           description: The name of the sub-sub-subcategory
+ *                                         children:
+ *                                           type: array
+ *                                           items:
+ *                                             type: object
+ *                                             properties:
+ *                                               name:
+ *                                                 type: string
+ *                                                 description: The name of the category
+ *                                               children:
+ *                                                 type: array
+ *                                                 items:
+ *                                                   type: object
+ *                                                   properties:
+ *                                                     name:
+ *                                                       type: string
+ *                                                       description: The name of the category
+ *                                                     children:
+ *                                                       type: array
+ *                                                       items:
+ *                                                         type: object
+ *                                                         properties:
+ *                                                           name:
+ *                                                             type: string
+ *                                                             description: The name of the category
+ *                                                           children:
+ *                                                             type: array
+ *                                                             items:
+ *                                                               type: object
+ *                                                               properties:
+ *                                                                 name:
+ *                                                                   type: string
+ *                                                                   description: The name of the category
+ *                                                                 children:
+ *                                                                   type: array
+ *                                                                   items:
+ *                                                                     type: object
+ *                                                                     properties:
+ *                                                                       name:
+ *                                                                         type: string
+ *                                                                         description: The name of the category
+ *                                                                       children:
+ *                                                                         type: array
+ *                                                                         items:
+ *                                                                           type: object
+ *                                                                           properties:
+ *                                                                             name:
+ *                                                                               type: string
+ *                                                                               description: The name of the category
+ *                                                                             children:
+ *                                                                               type: array
+ *                                                                               items:
+ *                                                                                 type: object
+ *                                                                                 properties:
+ *                                                                                   name:
+ *                                                                                     type: string
+ *                                                                                     description: The name of the category
+ *                                                                                   children:
+ *                                                                                     type: array
+ *                                                                                     items:
+ *                                                                                       type: object
+ *                                                                                       properties:
+ *                                                                                         name:
+ *                                                                                           type: string
+ *                                                                                           description: The name of the category
+ *                                                                                         children:
+ *                                                                                           type: array
+ *                                                                                           items:
+ *                                                                                             type: object
+ *                                                                                             properties:
+ *                                                                                               name:
+ *                                                                                                 type: string
+ *                                                                                                 description: The name of the category
+ *                                                                                               children:
+ *                                                                                                 type: array
+ *                                                                                                 items:
+ *                                                                                                   type: object
+ *                                                                                                   properties:
+ *                                                                                                     name:
+ *                                                                                                       type: string
+ *                                                                                                       description: The name of the category
+ *                                                                                                     children:
+ *                                                                                                       type: array
+ *                                                                                                       items:
+ *                                                                                                         type: object
+ *                                                                                                         properties:
+ *                                                                                                           name:
+ *                                                                                                             type: string
+ *                                                                                                             description: The name of the category
+ *                                                                                                           children:
+ *                                                                                                             type: array
+ *                                                                                                             items:
+ *                                                                                                               type: object
+ *                                                                                                               properties:
+ *                                                                                                                 name:
+ *                                                                                                                   type: string
+ *                                                                                                                   description: The name of the category
+ *                                                                                                                 children:
+ *                                                                                                                   type: array
+ *                                                                                                                   items:
+ *                                                                                                                     type: object
+ *                                                                                                                     properties:
+ *                                                                                                                       name:
+ *                                                                                                                         type: string
+ *                                                                                                                         description: The name of the category
+ *                                                                                                                       children:
+ *                                                                                                                         type: array
+ *                                                                                                                         items:
+ *                                                                                                                           type: object
+ *                                                                                                                           properties:
+ *                                                                                                                             name:
+ *                                                                                                                               type: string
+ *                                                                                                                               description: The name of the category
+ *                                                                                                                             children:
+ *                                                                                                                               type: array
+ *                                                                                                                               items:
+ *                                                                                                                                 type: object
+ *                                                                                                                                 properties:
+ *     500:
+ *       description: Internal server error
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: Error message
+ *     tags:
+ *       - Categories
+ */
+/**
+ * @swagger
+ * /products/filter:
+ *   get:
+ *     summary: Retrieve products based on category and exclusivity.
+ *     description: Fetches products that belong to the specified category and optionally filters by exclusivity.
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The category to filter products by. Must be a valid category path.
+ *       - in: query
+ *         name: exclusive
+ *         schema:
+ *           type: string
+ *           enum: [1, ""]
+ *         required: false
+ *         description: When set to '1', filters products whose category path ends with the category path. If not provided, defaults to an empty string.
+ *     responses:
+ *       '200':
+ *         description: A list of products matching the filter criteria.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The ID of the product.
+ *                   name:
+ *                     type: string
+ *                     description: The name of the product.
+ *       '400':
+ *         description: Bad Request. Returned if the query parameters do not pass validation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: The validation error message.
+ *       '404':
+ *         description: Not Found. Returned if the specified category does not exist.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: The error message indicating that the category was not found.
+ *       '500':
+ *         description: Internal Server Error. Returned for unexpected errors.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: The error message.
+ *     tags:
+ *       - Categories
+ */
 /////////////////////////////////
 
 productRouter.get("/products", productController.products);
@@ -434,6 +764,10 @@ productRouter.post("/products/addfavourite/:productId", authenticateJWT, product
 productRouter.get("/products/oneproduct/:productId", productController.oneProduct);
 productRouter.get("/products/favourites", authenticateJWT, productController.getFavourites);
 productRouter.get("/products/search", productController.searchProducts);
+productRouter.get("/products/filter", productController.filter);
+
+productRouter.get("/products2", productController.products2);
+productRouter.get("/menu", productController.menu);
 
 ////////////////
 productRouter.use('api/v3/api-docs', swaggerUi.serve);
