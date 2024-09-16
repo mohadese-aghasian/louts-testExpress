@@ -21,6 +21,10 @@ module.exports=(sequelize,DataTypes)=>{
             
           }  
     });
+
+    ProductCovers.associate = (models) =>{
+      ProductCovers.hasMany(models.Products, { foreignKey:'coverId' });
+    }
     return ProductCovers;
 }
 

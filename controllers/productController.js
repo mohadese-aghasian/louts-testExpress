@@ -185,7 +185,9 @@ exports.products2=async(req, res)=>{
     if (exclusive === '1') {
         endcategory = category + '/';
     }
+
     const searchquery=value.searchtext.split(' ').join("|");
+
     try{
         if(category!='/'){
             const categoryExists = await db.CategoryPaths.findOne({
@@ -198,18 +200,19 @@ exports.products2=async(req, res)=>{
                 return res.status(404).json({message:'category was not found'});
             }
         }
-        const products=await db.Products.findAll({
+        
+        var products=await db.Products.findAll({
             limit:limitClause,
             offset:offsetClause,
             order: [[orderColumn, orderDirection]],
             where:{
                 [Op.or]:[
                     {title:{
-                        [Op.regexp] : searchquery,
+                        [Op.substring] : value.searchtext,
                         
                     }},
                     {description:{
-                        [Op.regexp]: searchquery
+                        [Op.substring] : value.searchtext,
                     }}
                 ]
             },
@@ -231,9 +234,45 @@ exports.products2=async(req, res)=>{
                   }],
                 }],
         });
+
+        if(products.length === 0 ){
+            products = await db.Products.findAll({
+                limit:limitClause,
+                offset:offsetClause,
+                order: [[orderColumn, orderDirection]],
+                where:{
+                    [Op.or]:[
+                        {title:{
+                            [Op.regexp] : searchquery,
+                            
+                        }},
+                        {description:{
+                            [Op.regexp]: searchquery
+                        }}
+                    ]
+                },
+                include:[{
+                    model: db.ProductCategoryPaths,
+                    required: true,
+                    include: [{
+                        model: db.CategoryPaths,
+                        attributes:['name','path'],
+                        where:{
+                            path:{
+                                [Op.and]:
+                                {
+                                    [Op.substring]:category,
+                                    [Op.endsWith]:endcategory,
+                                }
+                            }
+                        }
+                      }],
+                    }],
+            });
+        }
         return res.json(products);
     }catch(err){
-        return res.status(500).json({message:err});
+        return res.status(500).json({message:err.message});
     }
 }
 exports.filter=async(req, res)=>{
@@ -322,7 +361,6 @@ exports.uploadCover=async(req, res)=>{
             name:imageName,
         });
 
-        console.log(newcover);
         res.status(201).json({coverId:newcover.id});
 
     }catch(err){
@@ -330,17 +368,26 @@ exports.uploadCover=async(req, res)=>{
     }
 }
 exports.addProduct=async(req, res)=>{
-    const {title, description, price, coverId}=req.body;
-    console.log(req.body);
+
+    const {title, description, price, coverId, categoryId}=req.body;
+
     if(!coverId){
         return res.json({message:"please upload image!"});
     }
+
     const schema = Joi.object({
-        id: Joi.number().integer().required()
+        coverid: Joi.number().integer().required(),
+        price: Joi.number().integer().required(),
+        categoryId : Joi.number().integer().required(),
     });
-    const {error} = schema.validate({ id: coverId });
+    
+    const {error} = schema.validate({ 
+        coverid: coverId ,
+        price:price,
+        categoryId:categoryId
+    });
     if(error){
-        return res.status(400).json({message:"Invalid format, id must be an integer!"});
+        return res.status(400).json({message:error.message});
     }
 
     try {
@@ -351,7 +398,10 @@ exports.addProduct=async(req, res)=>{
             price: price,
             coverId:coverId
         });
-    
+        const productcategory= db.ProductCategoryPaths.create({
+            productId:newproduct.id,
+            categoryId:categoryId
+        });
 
         res.status(201).json({ message: 'File uploaded and processed successfully', newproduct });
     } catch (error) {

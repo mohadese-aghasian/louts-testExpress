@@ -256,6 +256,10 @@ const swaggerSpec = require('../swaggerConfig');
  *                 type: integer
  *                 description: The ID of the cover image associated with the product.
  *                 example: 1
+ *               categoryId:
+ *                 type: integer
+ *                 description: The ID of the category associated with the product.
+ *                 example: 1
  *     responses:
  *       201:
  *         description: Product created successfully with the provided details.
