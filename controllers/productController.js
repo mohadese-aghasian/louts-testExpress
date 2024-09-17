@@ -10,7 +10,7 @@ const exp = require('constants');
 const { RelationshipType } = require('sequelize/lib/errors/database/foreign-key-constraint-error');
 // const Sequelize=require(Sequelize);
 
-exports.menu=async(req, res)=>{
+exports.menuByPass=async(req, res)=>{
     try{
         const categories = await db.CategoryPaths.findAll();
   
@@ -20,7 +20,7 @@ exports.menu=async(req, res)=>{
         // Create a map of path to category nodes
         categories.forEach(category => {
             const pathParts = category.path.split('/').filter(Boolean); // Split path into parts and filter out empty strings
-            const categoryNode = { name: category.name, children: [] };
+            const categoryNode = { id:category.id, name: category.name, children: [] };
             categoryMap[category.path] = categoryNode;
         
             // If it's a root category, add to rootCategories
@@ -40,6 +40,50 @@ exports.menu=async(req, res)=>{
               }
             }
           });
+
+  return res.json(rootCategories);
+  
+    }catch(err){
+        return res.json({message:err.message});
+    }
+}
+exports.menu=async(req, res)=>{
+    try{
+        const categories = await db.Categories.findAll({
+            include: [{
+              model: db.Categories,
+              as: 'children',
+            }]
+          });
+        
+          const categoryMap = {};
+          const rootCategories = {};
+        
+          // Create a map of category id to category node
+          categories.forEach(category => {
+            const categoryNode = {
+              id: category.id,
+              name: category.name,
+              children: [],
+            };
+            categoryMap[category.id] = categoryNode;
+        
+            // If it has no parent, add to rootCategories
+            if (!category.parentId) {
+              rootCategories[category.id] = categoryNode;
+            }
+          });
+        
+          // Build the tree by adding children to their parents
+          categories.forEach(category => {
+            if (category.parentId) {
+              const parent = categoryMap[category.parentId];
+              if (parent) {
+                parent.children.push(categoryMap[category.id]);
+              }
+            }
+          });
+        
 
   return res.json(rootCategories);
   
@@ -77,6 +121,9 @@ exports.products=async(req, res)=>{
             'string.base': 'OrderDirection must be a string.',
             'any.only': 'OrderDirection must be either ASC or DESC.',
         }),
+        category: Joi.string().default(null).messages({
+            'string.empty': 'Category is required',
+        }),
     });
     
     const { error, value } = schema.validate({
@@ -85,48 +132,86 @@ exports.products=async(req, res)=>{
         start: offsetClause,
         orderBy: orderColumn,
         orderDirection: orderDirection,
+        category:req.query.category,
     });
     if(error){
         return res.status(400).json({message:error.details[0].message});
     }
     const searchquery=value.searchtext.split(' ').join("|");
+
+    const { category} = value;
+    console.log(category);
     try{
-        const products=await db.Products.findAll({
+        if(category!=null){
+            var categoryExists = await db.Categories.findOne({
+                where: {
+                name: category
+                }
+            });
+            console.log('categoryExists:'+categoryExists);
+            if(!categoryExists){
+                return res.status(404).json({message:'category was not found'});
+            }
+        }
+        var products=await db.Products.findAll({
             limit:limitClause,
             offset:offsetClause,
             order: [[orderColumn, orderDirection]],
             where:{
                 [Op.or]:[
                     {title:{
-                        [Op.regexp] : searchquery,
+                        [Op.substring] : value.searchtext,
                         
                     }},
                     {description:{
-                        [Op.regexp]: searchquery
+                        [Op.substring] : value.searchtext,
                     }}
                 ]
             },
             include:[{
                 model: db.Categories,
-                required: false,
+                required: true,
                 as: 'categories',
+                where: category ? { id : categoryExists.id } : {},
                 include: [
                     {
                       model: db.Categories,
                       as: 'parent',
-                      include: [
-                        {
-                          model: db.Categories,
-                          as: 'parent', 
-                          required: false,
-                        },
-                      ],
                     }],
                 }],
         });
+        if(products.length === 0){
+            products = await db.Products.findAll({
+                limit:limitClause,
+                offset:offsetClause,
+                order: [[orderColumn, orderDirection]],
+                where:{
+                    [Op.or]:[
+                        {title:{
+                            [Op.regexp] : searchquery,
+                            
+                        }},
+                        {description:{
+                            [Op.regexp]: searchquery
+                        }}
+                    ]
+                },
+                include:[{
+                    model: db.Categories,
+                    required: true,
+                    as: 'categories',
+                    where: category ? { id : categoryExists.id } : {},
+                    include: [
+                        {
+                          model: db.Categories,
+                          as: 'parent',
+                        }],
+                    }],
+            }); 
+        }
         return res.json(products);
     }catch(err){
-        return res.status(500).json({message:err});
+        return res.status(500).json({message:err.message});
     }
 }
 exports.products2=async(req, res)=>{
@@ -187,7 +272,7 @@ exports.products2=async(req, res)=>{
     }
 
     const searchquery=value.searchtext.split(' ').join("|");
-
+    
     try{
         if(category!='/'){
             const categoryExists = await db.CategoryPaths.findOne({
