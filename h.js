@@ -1,6 +1,8 @@
-const { where } = require("sequelize");
+const { where, Model } = require("sequelize");
 const db=require("./models/index");
 const { Op } = require('sequelize');
+const { faker } = require('@faker-js/faker');
+
 // const results = {
 //     fullText: fullTextResults.map(product => product.id),
 //     wordByWord: wordByWordResults.map(product => product.id)
@@ -15,19 +17,39 @@ const { Op } = require('sequelize');
 //       id: uniqueResults
 //     }
 //   });
-  
-// for(var i =5; i<=16; i=i+2) {
+// var n;
+// var size=[['s','l'],['l','xl','xxl'],['xl', 'xxl']];
+// var brand=[['samsung','apple'],['xiaomi','asus','lenovo'],['bosh','LG']];
+// for(var i =91; i<=222; i++) {
+//   n=Math.floor(Math.random()*3)+1;
 //     const productExists =  db.Products.findOne({
 //         where: { id: i }
 //       });
 //       if (!productExists) {
 //         continue;}  
-//     db.ProductCategoryPaths.create({
-//         productId:i,
-//         // categoryId:Math.floor(Math.random()*8)+1
-//         categoryId:8,
-//     });
+        
+//       if(n===1){
+//         const p = db.ProductAttributeValues.create({
+//           productId:i,
+//           attributeId:n,
+//           value:size[Math.floor(Math.random()*3)],
+//       });
+//       }else if(n===2){
+//         const p = db.ProductAttributeValues.create({
+//           productId:i,
+//           attributeId:n,
+//           value:[faker.color.human(), faker.color.human()],
+//       });
+//       }else{
+//         const p =db.ProductAttributeValues.create({
+//           productId:i,
+//           attributeId:n,
+//           value:brand[Math.floor(Math.random()*3)],
+//       });
+//       }
+    
 // }
+
 // for(var i=5; i<221; i++){
 //     const productExists =  db.Products.findOne({
 //         where: { id: i }
@@ -84,24 +106,27 @@ const { Op } = require('sequelize');
 //     name:'Food',
 //     path:'Food/'
 // });
-var searchText='Lander is the trademarked name of';
-const words = searchText.split(' ');
-console.log(words.map(word => `%${word}%`));
-const wordByWordSearchResults = db.Products.findAll({
-    where: {
-      [Op.or]: [
-        {
-          title: {
-            [Op.iLike]: { [Op.any]: words.map(word => `%${word}%`) }
-          }
-        },
-        {
-          description: {
-            [Op.iLike]: { [Op.any]: words.map(word => `%${word}%`) }
-          }
-        }
-      ]
-    }
-  });
-  console.log(JSON.stringify(wordByWordSearchResults));
-  
+ 
+// db.Attributes.bulkCreate([
+//   {name: 'size'},
+//   {name: 'color'},
+//   {name: 'brand'}
+// ]);
+// db.ProductAttributeValues.bulkCreate([
+//   {attributeId:2, productId:5, value:['yellow','green']},
+//   {attributeId:3, productId:6, value:['apple','samsung']},
+//   {attributeId:1, productId:7, value:['s','m','l']},
+// ]);
+// const a=db.ProductAttributeValues.update(
+//   {productId:7},
+//   {
+//     where:{
+//       id:3
+//     }
+//   }
+// );
+// db.ProductAttributeValues.destroy({
+//   where:{
+//     id:9
+//   }
+// });

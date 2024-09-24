@@ -1,12 +1,9 @@
 'use strict';
 
-const { query } = require('express');
-const { sequelize } = require('../models');
-
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    queryInterface.createTable("Categories", {
+    queryInterface.createTable('Attributes', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -14,17 +11,8 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       name:{
-        allowNull:false,
         type:Sequelize.STRING,
-        unique:true, 
-      },
-      parentId:{
-        type:Sequelize.INTEGER,
-        defaultValue:null,
-        references:{
-          model:"Categories",
-          key:'id'
-        }
+        allowNull:false,
       },
       createdAt: {
         allowNull: false,
@@ -37,54 +25,46 @@ module.exports = {
         
       }
     });
-    await queryInterface.createTable("ProductCategories", {
+
+    queryInterface.createTable('ProductAttributeValues', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      productId:{
+      attributeId:{
         type:Sequelize.INTEGER,
         references:{
-          model:"Products",
-          key:"id"
+          model:'Attributes',
+          key:'id'
         },
-        allowNull:false
+        allowNull:false,
       },
-      categoryId:{
+      productId:{
         type:Sequelize.INTEGER, 
         references:{
-          model:"Categories",
-          key:"id"
+          model:'Products',
+          key:'id'
         },
-        allowNull:false
+        allowNull:false,
+      },
+      value:{
+        type:Sequelize.ARRAY(Sequelize.STRING),
       },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
-        
       },
       updatedAt: {
         allowNull: false,
         type: Sequelize.DATE,
-        
       }
-    });
-    await queryInterface.addColumn("Products","category",{
-      type:Sequelize.INTEGER,
-      references:{
-        model:"Categories",
-        key:'id'
-      },
-      defaultValue:1
     });
   },
 
   async down (queryInterface, Sequelize) {
-    await queryInterface.dropTable("ProductCategories");
-    await queryInterface.dropTable("Categories");
-    await queryInterface.removeColumn("Products","category");
-   
+    queryInterface.dropTable('ProductAttributeValues');
+    queryInterface.dropTable('Attributes');
   }
 };

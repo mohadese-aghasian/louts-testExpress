@@ -134,11 +134,7 @@ const swaggerSpec = require('../swaggerConfig');
  *           default: ASC
  *           example: ASC
  *         description: The direction in which to sort the products (ascending or descending).
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *         description: The category to filter products by. Must be a valid category path.
+
  *     responses:
  *       200:
  *         description: A list of products
@@ -265,6 +261,100 @@ const swaggerSpec = require('../swaggerConfig');
  *                 type: integer
  *                 description: The ID of the category associated with the product.
  *                 example: 1
+ *     responses:
+ *       201:
+ *         description: Product created successfully with the provided details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'Product created successfully'
+ *                 newproduct:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       description: The ID of the newly created product.
+ *                       example: 1
+ *                     title:
+ *                       type: string
+ *                       description: The title of the product.
+ *                       example: 'Sample Product'
+ *                     description:
+ *                       type: string
+ *                       description: The description of the product.
+ *                       example: 'This is a sample product description.'
+ *                     price:
+ *                       type: number
+ *                       format: float
+ *                       description: The price of the product.
+ *                       example: 99.99
+ *                     coverId:
+ *                       type: integer
+ *                       description: The ID of the cover image associated with the product.
+ *                       example: 1
+ *       400:
+ *         description: Bad request if required fields are missing or validation fails.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'Bad request: Missing required fields or validation failed.'
+ *       500:
+ *         description: Internal server error if the product creation fails.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: 'Failed to create the product.'
+ *                 error:
+ *                   type: string
+ *                   description: Detailed error message.
+ *                   example: 'Database error or other issue.'
+ */
+/**
+ * @swagger
+ * /addproduct2:
+ *   post:
+ *     summary: Add a new product
+ *     description: Creates a new product in the database with the provided details, including a reference to a cover image.
+ *     tags:
+ *       - Products
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: The title of the product.
+ *                 example: 'Sample Product'
+ *               description:
+ *                 type: string
+ *                 description: A detailed description of the product.
+ *                 example: 'This is a sample product description.'
+ *               price:
+ *                 type: number
+ *                 format: float
+ *                 description: The price of the product.
+ *                 example: 99.99
+ *               coverId:
+ *                 type: integer
+ *                 description: The ID of the cover image associated with the product.
+ *               categoryId:
+ *                 type: integer
+ *                 description: The ID of the category associated with the product.
  *     responses:
  *       201:
  *         description: Product created successfully with the provided details.
@@ -686,10 +776,80 @@ const swaggerSpec = require('../swaggerConfig');
  *     tags:
  *       - Categories
  */
+
+/**
+ * @swagger
+ * /productbyattr:
+ *   get:
+ *     summary: Get a list of products filtered by attribute name
+ *     tags:
+ *       - Products
+ *     parameters:
+ *       - in: query
+ *         name: attributeName
+ *         required: false
+ *         description: Name of the attribute to filter products by
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: attributeValue
+ *         required: false
+ *         description: Value of the attribute to filter products by
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A list of products with their attributes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The product ID
+ *                   name:
+ *                     type: string
+ *                     description: The name of the product
+ *                   attributes:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                           description: The attribute ID
+ *                         name:
+ *                           type: string
+ *                           description: The name of the attribute
+ *       404:
+ *         description: Attribute not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message
+ *       500:
+ *         description: An error occurred
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message
+ */
 /////////////////////////////////
 
 productRouter.get("/products", productController.products);
 productRouter.post("/addproduct",  productController.addProduct);
+productRouter.post("/addproduct2", productController.addProduct2);
 productRouter.post("/addproduct/cover", uploadMiddleware, productController.uploadCover);
 productRouter.post("/products/addfavourite/:productId", authenticateJWT, productController.addFavourite);
 productRouter.get("/products/oneproduct/:productId", productController.oneProduct);
@@ -700,6 +860,8 @@ productRouter.get("/products/filter", productController.filter);
 productRouter.get("/products2", productController.products2);
 productRouter.get("/menu/bypath", productController.menuByPass);
 productRouter.get('/menu', productController.menu);
+
+productRouter.get('/productbyattr', productController.productByAttribute);
 
 ////////////////
 productRouter.use('api/v3/api-docs', swaggerUi.serve);

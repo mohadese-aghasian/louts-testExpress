@@ -6,9 +6,7 @@ const {  where, Op, Sequelize } = require('sequelize');
 const Joi = require("joi");
 const path = require('path');
 const sharp = require('sharp');
-const exp = require('constants');
-const { RelationshipType } = require('sequelize/lib/errors/database/foreign-key-constraint-error');
-// const Sequelize=require(Sequelize);
+
 
 exports.menuByPass=async(req, res)=>{
     try{
@@ -179,6 +177,12 @@ exports.products=async(req, res)=>{
                       as: 'parent',
                     }],
                 }],
+                include: [{
+                    model: db.Attributes,
+                    as: 'attributes',
+                    required:true,
+                    
+                }],
         });
         if(products.length === 0){
             products = await db.Products.findAll({
@@ -207,6 +211,12 @@ exports.products=async(req, res)=>{
                           as: 'parent',
                         }],
                     }],
+                    include: [{
+                        model: db.Attributes,
+                        as: 'attributes',
+                        required:true,
+                        
+                    }],
             }); 
         }
         return res.json(products);
@@ -229,8 +239,8 @@ exports.products2=async(req, res)=>{
             'string.max': 'Search text must be 100 characters or fewer.'
         }),
         limit: Joi.number().integer().messages({
-        'number.base': 'Limit must be a number.',
-        'number.integer': 'Limit must be an integer.',}),
+            'number.base': 'Limit must be a number.',
+            'number.integer': 'Limit must be an integer.',}),
         start:Joi.number().integer().messages({
             'number.base': 'Start must be a number.',
             'number.integer': 'Start must be an integer.',
@@ -248,7 +258,7 @@ exports.products2=async(req, res)=>{
             'any.required': 'Category is required'
         }),
         exclusive: Joi.string().valid('1', '').allow(null).optional().messages({
-        'any.only': 'Exclusive must be 1 or an empty string',
+            'any.only': 'Exclusive must be 1 or an empty string',
         }),
     });
     
@@ -317,6 +327,11 @@ exports.products2=async(req, res)=>{
                         }
                     }
                   }],
+                }],include: [{
+                    model: db.Attributes,
+                    as: 'attributes',
+                    required:true,
+                    
                 }],
         });
 
@@ -352,6 +367,12 @@ exports.products2=async(req, res)=>{
                             }
                         }
                       }],
+                    }],
+                    include: [{
+                        model: db.Attributes,
+                        as: 'attributes',
+                        required:true,
+                        
                     }],
             });
         }
@@ -456,13 +477,58 @@ exports.addProduct=async(req, res)=>{
 
     const {title, description, price, coverId, categoryId}=req.body;
 
+    if(!coverId || !categoryId){
+        return res.json({message:"please upload image or provide category!"});
+    }
+
+    const schema = Joi.object({
+        coverid: Joi.number().integer().required(),
+        price: Joi.number().required(),
+        categoryId : Joi.number().integer().required(),
+    });
+    
+    const {error} = schema.validate({ 
+        coverid: coverId ,
+        price:price,
+        categoryId:categoryId
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
+
+    try {
+        const categoryid = db.Categories.findByPk(categoryId);
+        if(!categoryid){
+            return res.status.json({message:"category not found!"});
+        }
+    
+        const newproduct = await db.Products.create({
+            title: title,
+            description: description, 
+            price: price,
+            coverId:coverId
+        });
+        const productcategory= await db.ProductCategories.create({
+            productId:newproduct.id,
+            categoryId:categoryId
+        });
+
+        res.status(201).json({ message: 'File uploaded and processed successfully', newproduct , productcategory});
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to process the image.', error: error.message });
+    };
+}
+exports.addProduct2=async(req, res)=>{
+
+    const {title, description, price, coverId, categoryId}=req.body;
+
     if(!coverId){
         return res.json({message:"please upload image!"});
     }
 
     const schema = Joi.object({
         coverid: Joi.number().integer().required(),
-        price: Joi.number().integer().required(),
+        price: Joi.number().required(),
         categoryId : Joi.number().integer().required(),
     });
     
@@ -483,14 +549,14 @@ exports.addProduct=async(req, res)=>{
             price: price,
             coverId:coverId
         });
-        const productcategory= db.ProductCategoryPaths.create({
+        const productcategory= await db.ProductCategoryPaths.create({
             productId:newproduct.id,
             categoryId:categoryId
         });
 
-        res.status(201).json({ message: 'File uploaded and processed successfully', newproduct });
-    } catch (error) {
-        res.status(500).json({ message: 'Failed to process the image.', error: error.message });
+        res.status(201).json({ message: 'File uploaded and processed successfully', newproduct , productcategory});
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to process the image.', error: err.message });
     };
 }
 
@@ -636,4 +702,42 @@ exports.searchProducts=async(req, res)=>{
     }catch(err){
         return res.status(500).json({message:err.message});
     }
+}
+
+exports.productByAttribute=async(req, res)=>{
+
+    const {attributeName, attributeValue} = req.query;
+    const options={
+        include: [{
+            model: db.Attributes,
+            as: 'attributes',
+            required:true, 
+        }],
+    }
+
+    if (attributeName) {
+        const attr = await db.Attributes.findOne({where:{name:attributeName}});
+        if (!attr){
+            return res.status(404).json({message:"attribute not found"});
+        }
+    }
+        // options.include[0].where = {
+        //     id: attr.id,
+            
+        // };
+
+        // if (attributeValue) {
+            
+        //     options.include[0].include[1].where = {
+        //         value: { [Op.contains]: [attributeValue] }, 
+        
+        
+    
+    try{
+        const products= await db.Products.findAll(options);
+        return res.status(200).json(products);
+    }catch(err){
+        return res.status(500).json({message:err.message}); 
+    }
+
 }
