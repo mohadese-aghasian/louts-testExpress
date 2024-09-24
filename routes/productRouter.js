@@ -786,13 +786,13 @@ const swaggerSpec = require('../swaggerConfig');
  *       - Products
  *     parameters:
  *       - in: query
- *         name: attributeName
+ *         name: color
  *         required: false
  *         description: Name of the attribute to filter products by
  *         schema:
  *           type: string
  *       - in: query
- *         name: attributeValue
+ *         name: size
  *         required: false
  *         description: Value of the attribute to filter products by
  *         schema:

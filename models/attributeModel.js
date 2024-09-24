@@ -21,12 +21,14 @@ module.exports=(sequelize,DataTypes)=>{
     });
     
     Attribute.associate = (models) =>{
-      Attribute.belongsToMany(models.Products, {
-        through:models.ProductAttributeValues,
-        foreignKey: 'attributeId',
-        otherKey: 'productId',
-        as:'theproduct',
-      });
+      // Attribute.belongsToMany(models.Products, {
+      //   through:models.ProductAttributeValues,
+      //   foreignKey: 'attributeId',
+      //   otherKey: 'productId',
+      //   as:'theproduct',
+      // });
+      Attribute.hasMany(models.ProductAttributeValues, { foreignKey: 'attributeId', as: 'productValues' });
+
     }
     
     

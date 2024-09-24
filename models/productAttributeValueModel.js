@@ -42,12 +42,17 @@ module.exports=(sequelize,DataTypes)=>{
 
       ProductAttributeValue.belongsTo(models.Products, {
         foreignKey:'productId',
-        
+        as: 'products',
         });
 
-      ProductAttributeValue.belongsTo(models.Attributes, { foreignKey: 'attributeId' });
+      ProductAttributeValue.belongsTo(models.Attributes, {
+         foreignKey: 'attributeId' ,
+          as: 'attribute'
+        });
 
-      
     }
+    
+    
+    
     return ProductAttributeValue;
   }

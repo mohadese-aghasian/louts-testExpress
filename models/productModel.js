@@ -87,19 +87,18 @@ module.exports = (sequelize, DataTypes) => {
 
       Product.hasMany(models.ProductCategoryPaths, { foreignKey: 'productId' });
 
-      // Product.belongsToMany(models.Attributes, {
-      //   through:models.ProductAttributeValues,
-      //   foreignKey: 'attributeId',
-      //   otherKey:'productId',
-      //   as :'attributes',
-      //   });
+      
+      Product.hasMany(models.ProductAttributeValues, { foreignKey: 'productId', as: 'attributeValues' });
 
-        Product.belongsToMany(models.Attributes, {
-          through: models.ProductAttributeValues,
-          foreignKey: 'productId',
-          otherKey: 'attributeId',
-          as: 'attributes', 
-      });
+
+      //   Product.belongsToMany(models.Attributes, {
+      //     through: models.ProductAttributeValues,
+      //     foreignKey: 'productId',
+      //     otherKey: 'attributeId',
+      //     as: 'attributes', 
+      // });
+
+
     };
 
     return Product;

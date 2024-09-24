@@ -6,6 +6,7 @@ const {  where, Op, Sequelize } = require('sequelize');
 const Joi = require("joi");
 const path = require('path');
 const sharp = require('sharp');
+const { name } = require('ejs');
 
 
 exports.menuByPass=async(req, res)=>{
@@ -155,6 +156,7 @@ exports.products=async(req, res)=>{
             limit:limitClause,
             offset:offsetClause,
             order: [[orderColumn, orderDirection]],
+            attributes: { exclude: ['createdAt','updatedAt'] },
             where:{
                 [Op.or]:[
                     {title:{
@@ -166,23 +168,35 @@ exports.products=async(req, res)=>{
                     }}
                 ]
             },
-            include:[{
-                model: db.Categories,
-                required: true,
-                as: 'categories',
-                where: category ? { id : categoryExists.id } : {},
+        include:[{
+            model: db.Categories,
+            required: true,
+            as: 'categories',
+            attributes: { exclude: ['createdAt','updatedAt','id'] },
+            where: category ? { id : categoryExists.id } : {},
+            include: [
+                {
+                    model: db.Categories,
+                    as: 'parent',
+                    attributes: { exclude: ['createdAt','updatedAt','id',] },
+                }],
+            }],
+        include: [
+            {
+                model: db.ProductAttributeValues,
+                as: 'attributeValues',
+                attributes: { exclude: ['createdAt','updatedAt'] },
+                
                 include: [
-                    {
-                      model: db.Categories,
-                      as: 'parent',
-                    }],
-                }],
-                include: [{
+                {
                     model: db.Attributes,
-                    as: 'attributes',
-                    required:true,
+                    as: 'attribute', 
+                    attributes: { exclude: ['createdAt','updatedAt','id'] },
                     
-                }],
+                },
+                ],
+            },
+            ],
         });
         if(products.length === 0){
             products = await db.Products.findAll({
@@ -204,19 +218,30 @@ exports.products=async(req, res)=>{
                     model: db.Categories,
                     required: true,
                     as: 'categories',
+                    attributes: { exclude: ['createdAt','updatedAt','id'] },
                     where: category ? { id : categoryExists.id } : {},
                     include: [
                         {
                           model: db.Categories,
                           as: 'parent',
+                          attributes: { exclude: ['createdAt','updatedAt','id'] },
                         }],
                     }],
-                    include: [{
-                        model: db.Attributes,
-                        as: 'attributes',
-                        required:true,
-                        
-                    }],
+                include: [
+                    {
+                        model: db.ProductAttributeValues,
+                        as: 'attributeValues',
+                        attributes: { exclude: ['createdAt','updatedAt'] },
+                        include: [
+                        {
+                            model: db.Attributes,
+                            as: 'attribute', 
+                            attributes: { exclude: ['createdAt','updatedAt','id'] },
+                            
+                        },
+                        ],
+                    },
+                    ],
             }); 
         }
         return res.json(products);
@@ -313,9 +338,12 @@ exports.products2=async(req, res)=>{
             },
             include:[{
                 model: db.ProductCategoryPaths,
-                required: true,
+                required: false,
+                as:'category',
+                attributes: { exclude: ['createdAt','updatedAt'] },
                 include: [{
                     model: db.CategoryPaths,
+                    
                     attributes:['name','path'],
                     where:{
                         path:{
@@ -327,12 +355,23 @@ exports.products2=async(req, res)=>{
                         }
                     }
                   }],
-                }],include: [{
-                    model: db.Attributes,
-                    as: 'attributes',
-                    required:true,
-                    
                 }],
+            include: [
+                {
+                    model: db.ProductAttributeValues,
+                    as: 'attributeValues',
+                    attributes: { exclude: ['createdAt','updatedAt'] },
+                    
+                    include: [
+                    {
+                        model: db.Attributes,
+                        as: 'attribute', 
+                        attributes: { exclude: ['createdAt','updatedAt','id'] },
+                        
+                    },
+                    ],
+                },
+                ],
         });
 
         if(products.length === 0 ){
@@ -354,9 +393,11 @@ exports.products2=async(req, res)=>{
                 include:[{
                     model: db.ProductCategoryPaths,
                     required: true,
+                    attributes: { exclude: ['createdAt','updatedAt','id'] },
                     include: [{
                         model: db.CategoryPaths,
                         attributes:['name','path'],
+                        attributes: { exclude: ['createdAt','updatedAt'] },
                         where:{
                             path:{
                                 [Op.and]:
@@ -368,12 +409,22 @@ exports.products2=async(req, res)=>{
                         }
                       }],
                     }],
-                    include: [{
-                        model: db.Attributes,
-                        as: 'attributes',
-                        required:true,
-                        
-                    }],
+                include: [
+                    {
+                        model: db.ProductAttributeValues,
+                        as: 'attributeValues',
+                        attributes: { exclude: ['createdAt','updatedAt'] },
+                    //   where: ,
+                        include: [
+                        {
+                            model: db.Attributes,
+                            as: 'attribute', 
+                            attributes: { exclude: ['createdAt','updatedAt','id'] },
+                            
+                        },
+                        ],
+                    },
+                    ],
             });
         }
         return res.json(products);
@@ -706,35 +757,45 @@ exports.searchProducts=async(req, res)=>{
 
 exports.productByAttribute=async(req, res)=>{
 
-    const {attributeName, attributeValue} = req.query;
-    const options={
-        include: [{
-            model: db.Attributes,
-            as: 'attributes',
-            required:true, 
-        }],
-    }
+    const {color, size} = req.query;
+    const whereConditions = [];
 
-    if (attributeName) {
-        const attr = await db.Attributes.findOne({where:{name:attributeName}});
-        if (!attr){
-            return res.status(404).json({message:"attribute not found"});
-        }
-    }
-        // options.include[0].where = {
-        //     id: attr.id,
-            
-        // };
+    // if (color) {
+    //     whereConditions.push({
+        
+    //     value: color,
+    //     });
+    // }
 
-        // if (attributeValue) {
-            
-        //     options.include[0].include[1].where = {
-        //         value: { [Op.contains]: [attributeValue] }, 
-        
-        
-    
+    // if (size) {
+    //     whereConditions.push({
+       
+    //     value: size,
+    //     });
+    // }
+    console.log(req.query);
     try{
-        const products= await db.Products.findAll(options);
+        const products= await db.Products.findAll({
+            include: [
+                {
+                  model: db.ProductAttributeValues,
+                  as: 'attributeValues',
+                  attributes: { exclude: ['createdAt','updatedAt'] },
+                  where: {
+                    value:{[Op.like]: { [Op.any]: color }}
+                    // [Op.in]:[1,],
+                  },
+                  include: [
+                    {
+                      model: db.Attributes,
+                      as: 'attribute', 
+                      attributes: { exclude: ['createdAt','updatedAt','id'] },
+                      
+                    },
+                  ],
+                },
+              ],
+        });
         return res.status(200).json(products);
     }catch(err){
         return res.status(500).json({message:err.message}); 
