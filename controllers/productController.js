@@ -778,18 +778,18 @@ exports.productByAttribute=async(req, res)=>{
         const products= await db.Products.findAll({
             include: [
                 {
-                  model: db.ProductAttributeValues,
+                  model: db.ProductAttributes,
                   as: 'attributeValues',
                   attributes: { exclude: ['createdAt','updatedAt'] },
-                  where: {
-                    value:{[Op.like]: { [Op.any]: color }}
-                    // [Op.in]:[1,],
-                  },
+                //   where: {
+                //     value:{[Op.like]: { [Op.any]: color }}
+                //     // [Op.in]:[1,],
+                //   },
                   include: [
                     {
-                      model: db.Attributes,
-                      as: 'attribute', 
-                      attributes: { exclude: ['createdAt','updatedAt','id'] },
+                      model: db.CategoryAttributeValues,
+                    //   as: 'attribute', 
+                      attributes: { exclude: ['createdAt','updatedAt'] },
                       
                     },
                   ],

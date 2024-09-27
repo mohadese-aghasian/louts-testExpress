@@ -71,14 +71,14 @@ module.exports = {
         
       }
     });
-    await queryInterface.addColumn("Products","category",{
-      type:Sequelize.INTEGER,
-      references:{
-        model:"Categories",
-        key:'id'
-      },
-      defaultValue:1
-    });
+    // await queryInterface.addColumn("Products","category",{
+    //   type:Sequelize.INTEGER,
+    //   references:{
+    //     model:"Categories",
+    //     key:'id'
+    //   },
+    //   defaultValue:1
+    // });
   },
 
   async down (queryInterface, Sequelize) {

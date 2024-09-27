@@ -54,7 +54,7 @@ module.exports = {
 
   async down (queryInterface, Sequelize) {
     queryInterface.dropTable('ProductAttributes');
-    queryInterface.changeColumn('CategoryAttributeValues',value, {
+    queryInterface.changeColumn('CategoryAttributeValues','value', {
       type:Sequelize.ARRAY(Sequelize.STRING),
     });
     queryInterface.addColumn('CategoryAttributeValues','productId',{

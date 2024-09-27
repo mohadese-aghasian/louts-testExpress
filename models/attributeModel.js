@@ -27,7 +27,9 @@ module.exports=(sequelize,DataTypes)=>{
       //   otherKey: 'productId',
       //   as:'theproduct',
       // });
-      Attribute.hasMany(models.ProductAttributeValues, { foreignKey: 'attributeId', as: 'productValues' });
+      Attribute.hasMany(models.CategoryAttributeValues, { foreignKey: 'attributeId', 
+        // as: 'productValues' 
+      });
 
     }
     

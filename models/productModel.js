@@ -88,7 +88,7 @@ module.exports = (sequelize, DataTypes) => {
       Product.hasMany(models.ProductCategoryPaths, { foreignKey: 'productId' });
 
       
-      Product.hasMany(models.ProductAttributeValues, { foreignKey: 'productId', as: 'attributeValues' });
+      Product.hasMany(models.ProductAttributes, { foreignKey: 'productId', as: 'attributeValues' });
 
 
       //   Product.belongsToMany(models.Attributes, {

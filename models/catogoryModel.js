@@ -89,6 +89,14 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'parentId',
       as: 'children',
     });
+
+    Category.hasMany(models.CategoryAttributeValues, {
+      foreignKey: 'categoryId',
+      as: 'attributes'
+    });
+
+
+
   };
 
   return Category;
