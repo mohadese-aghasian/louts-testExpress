@@ -172,31 +172,31 @@ exports.products=async(req, res)=>{
             model: db.Categories,
             required: true,
             as: 'categories',
-            attributes: { exclude: ['createdAt','updatedAt','id'] },
+            attributes: { exclude: ['createdAt','updatedAt'] },
             where: category ? { id : categoryExists.id } : {},
-            include: [
-                {
-                    model: db.Categories,
-                    as: 'parent',
-                    attributes: { exclude: ['createdAt','updatedAt','id',] },
-                }],
+            // include: [
+            //     {
+            //         model: db.Categories,
+            //         as: 'parent',
+            //         attributes: { exclude: ['createdAt','updatedAt','id',] },
+            //     }],
             }],
-        include: [
-            {
-                model: db.ProductAttributeValues,
-                as: 'attributeValues',
-                attributes: { exclude: ['createdAt','updatedAt'] },
+        // include: [
+        //     {
+        //         model: db.ProductAttributes,
+        //         as: 'attributeValues',
+        //         attributes: { exclude: ['createdAt','updatedAt'] },
                 
-                include: [
-                {
-                    model: db.Attributes,
-                    as: 'attribute', 
-                    attributes: { exclude: ['createdAt','updatedAt','id'] },
-                    
-                },
-                ],
-            },
-            ],
+        //         include: [
+        //             {
+        //               model: db.CategoryAttributeValues,
+        //             //   as: 'attribute', 
+        //               attributes: { exclude: ['createdAt','updatedAt'] },
+                      
+        //             },
+        //           ],
+        //     },
+        //     ],
         });
         if(products.length === 0){
             products = await db.Products.findAll({
@@ -757,46 +757,88 @@ exports.searchProducts=async(req, res)=>{
 
 exports.productByAttribute=async(req, res)=>{
 
-    const {color, size} = req.query;
-    const whereConditions = [];
+    const {categoryId} = req.query;
+    const validAttributes = ['color', 'size', 'brand']; 
 
-    // if (color) {
-    //     whereConditions.push({
-        
-    //     value: color,
-    //     });
-    // }
+    // Validate query parameters
+    const queryAttributes = Object.keys(req.query).filter(key => validAttributes.includes(key));
+    const invalidKeys = Object.keys(req.query).filter(key => !validAttributes.includes(key) && key !== 'categoryId');
 
-    // if (size) {
-    //     whereConditions.push({
-       
-    //     value: size,
-    //     });
-    // }
+    if (invalidKeys.length > 0) {
+        return res.status(400).json({ message: `Invalid query parameter(s): ${invalidKeys.join(', ')}` });
+    }
+
     console.log(req.query);
+    console.log(queryAttributes);
     try{
+        const categoryAttributes = await db.CategoryAttributeValues.findAll({
+            where: { categoryId:categoryId },
+            include: [
+                {
+                    model: db.Attributes,
+                    attributes: ['name'], 
+                    as: 'attribute'
+                }
+            ]
+        });
+        
+        // Create a mapping of attribute names to valid values
+        const attributeMap = {};
+        categoryAttributes.forEach(attr => {
+            const attrName = attr.attribute.name; 
+            if (!attributeMap[attrName]) {
+                attributeMap[attrName] = [];
+            }
+            attributeMap[attrName].push(attr.value); 
+        });
+        console.log('attributeMap: ',attributeMap);
+
+        
+        const whereConditions = { [Op.and]: [] };
+
+        for (const attr of queryAttributes) {
+            if (req.query[attr]) {
+                const values = Array.isArray(req.query[attr]) ? req.query[attr] : [req.query[attr]];
+                console.log('value: ',values);
+                // // Ensure the values are valid for the attribute
+                if (values.some(value => !attributeMap[attr]?.includes(value))) {
+                    return res.status(400).json({ message: `Invalid value for ${attr}` });
+                }
+                whereConditions[Op.and].push({
+                    value: {
+                        [Op.in]: values
+                    }
+                });
+            }
+        }
+        
         const products= await db.Products.findAll({
             include: [
                 {
                   model: db.ProductAttributes,
                   as: 'attributeValues',
+                  required: true,
                   attributes: { exclude: ['createdAt','updatedAt'] },
-                //   where: {
-                //     value:{[Op.like]: { [Op.any]: color }}
-                //     // [Op.in]:[1,],
-                //   },
                   include: [
                     {
                       model: db.CategoryAttributeValues,
                     //   as: 'attribute', 
                       attributes: { exclude: ['createdAt','updatedAt'] },
+                      where: whereConditions ,
+                      include:[{
+                        model:db.Attributes,
+                        attributes: { exclude: ['createdAt','updatedAt'] },
+                        as: 'attribute',
+                        
+                      }]
                       
                     },
                   ],
                 },
               ],
+              
         });
-        return res.status(200).json(products);
+        return res.status(200).json({products, whereConditions});
     }catch(err){
         return res.status(500).json({message:err.message}); 
     }

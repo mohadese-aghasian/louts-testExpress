@@ -785,18 +785,36 @@ const swaggerSpec = require('../swaggerConfig');
  *     tags:
  *       - Products
  *     parameters:
- *       - in: query
- *         name: color
- *         required: false
- *         description: Name of the attribute to filter products by
+ *       - name: categoryId
+ *         in: query
+ *         required: true
+ *         description: The ID of the product category to filter products by.
  *         schema:
- *           type: string
- *       - in: query
- *         name: size
+ *           type: integer
+ *       - name: color
+ *         in: query
  *         required: false
- *         description: Value of the attribute to filter products by
+ *         description: Filter products by color. Accepts multiple values.
  *         schema:
- *           type: string
+ *           type: array
+ *           items:
+ *             type: string
+ *       - name: size
+ *         in: query
+ *         required: false
+ *         description: Filter products by size. Accepts multiple values.
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *       - name: brand
+ *         in: query
+ *         required: false
+ *         description: Filter products by brand. Accepts multiple values.
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
  *     responses:
  *       200:
  *         description: A list of products with their attributes

@@ -45,14 +45,15 @@ module.exports=(sequelize,DataTypes)=>{
       //   as: 'categories',
       //   });
 
-      // CategoryAttributeValue.belongsTo(models.Attributes, {
-      //    foreignKey: 'attributeId' ,
-      //     as: 'attribute'
-      //   });
+      CategoryAttributeValue.belongsTo(models.Attributes, {
+         foreignKey: 'attributeId' ,
+          as: 'attribute'
+        });
       CategoryAttributeValue.hasMany(models.ProductAttributes, {
         foreignKey: 'attributeValueId',
         // as: 'productAttributes'
       });
+      
 
 
     }
