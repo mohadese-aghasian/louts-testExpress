@@ -781,43 +781,34 @@ const swaggerSpec = require('../swaggerConfig');
  * @swagger
  * /productbyattr:
  *   get:
- *     summary: Get a list of products filtered by attribute name
- *     tags:
- *       - Products
+ *     summary: Get a list of products
+ *     description: Retrieves a list of products based on the provided parameters.
+ *     tags: [Products]
  *     parameters:
- *       - name: categoryId
- *         in: query
+ *       - in: query
+ *         name: categoryId
  *         required: true
- *         description: The ID of the product category to filter products by.
  *         schema:
  *           type: integer
- *       - name: color
- *         in: query
- *         required: false
- *         description: Filter products by color. Accepts multiple values.
+ *         description: The ID of the category to filter products.
+ *       - in: query
+ *         name: attributeId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the attribute to filter products.
+ *       - in: query
+ *         name: arrayvalues
+ *         required: true
  *         schema:
  *           type: array
  *           items:
  *             type: string
- *       - name: size
- *         in: query
- *         required: false
- *         description: Filter products by size. Accepts multiple values.
- *         schema:
- *           type: array
- *           items:
- *             type: string
- *       - name: brand
- *         in: query
- *         required: false
- *         description: Filter products by brand. Accepts multiple values.
- *         schema:
- *           type: array
- *           items:
- *             type: string
+ *           example: ["s", "m", "l"]
+ *         description: The values of the attribute to filter products.
  *     responses:
  *       200:
- *         description: A list of products with their attributes
+ *         description: A list of products matching the criteria
  *         content:
  *           application/json:
  *             schema:
@@ -827,42 +818,15 @@ const swaggerSpec = require('../swaggerConfig');
  *                 properties:
  *                   id:
  *                     type: integer
- *                     description: The product ID
  *                   name:
  *                     type: string
- *                     description: The name of the product
- *                   attributes:
- *                     type: array
- *                     items:
- *                       type: object
- *                       properties:
- *                         id:
- *                           type: integer
- *                           description: The attribute ID
- *                         name:
- *                           type: string
- *                           description: The name of the attribute
- *       404:
- *         description: Attribute not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   description: Error message
+ *       400:
+ *         description: Bad request - Invalid parameters
  *       500:
- *         description: An error occurred
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   description: Error message
+ *         description: Internal server error
  */
+
+
 /////////////////////////////////
 
 productRouter.get("/products", productController.products);

@@ -116,7 +116,7 @@ exports.products=async(req, res)=>{
             'string.base': 'OrderBy must be a string.',
             'any.only': 'OrderBy must be one of [title, createdAt, updatedAt, description, price, id].',
         }),
-        orderDirection: Joi.string().valid('ASC', 'DESC').default('ASC').messages({
+        orderDirection:Joi.string().valid('ASC', 'DESC').default('ASC').messages({
             'string.base': 'OrderDirection must be a string.',
             'any.only': 'OrderDirection must be either ASC or DESC.',
         }),
@@ -755,76 +755,171 @@ exports.searchProducts=async(req, res)=>{
     }
 }
 
+// exports.productByAttribute=async(req, res)=>{
+
+//     const {categoryId} = req.query;
+//     const validAttributes = ['color', 'size', 'brand']; 
+
+//     // Validate query parameters
+//     const queryAttributes = Object.keys(req.query).filter(key => validAttributes.includes(key));
+//     const invalidKeys = Object.keys(req.query).filter(key => !validAttributes.includes(key) && key !== 'categoryId');
+
+//     if (invalidKeys.length > 0) {
+//         return res.status(400).json({ message: `Invalid query parameter(s): ${invalidKeys.join(', ')}` });
+//     }
+
+//     console.log(req.query);
+//     console.log(queryAttributes);
+//     try{
+//         const categoryAttributes = await db.CategoryAttributeValues.findAll({
+//             where: { categoryId:categoryId },
+//             include: [
+//                 {
+//                     model: db.Attributes,
+//                     attributes: ['name'], 
+//                     as: 'attribute'
+//                 }
+//             ]
+//         });
+        
+//         // Create a mapping of attribute names to valid values
+//         const attributeMap = {};
+//         categoryAttributes.forEach(attr => {
+//             const attrName = attr.attribute.name; 
+//             if (!attributeMap[attrName]) {
+//                 attributeMap[attrName] = [];
+//             }
+//             attributeMap[attrName].push(attr.value); 
+//         });
+//         console.log('attributeMap: ',attributeMap);
+
+        
+//         const whereConditions = {};
+
+//         for (const attr of queryAttributes) {
+//             if (req.query[attr]) {
+//                 const values = Array.isArray(req.query[attr]) ? req.query[attr] : [req.query[attr]];
+//                 console.log('value: ',values);
+//                 // // Ensure the values are valid for the attribute
+//                 if (values.some(value => !attributeMap[attr]?.includes(value))) {
+//                     return res.status(400).json({ message: `Invalid value for ${attr}` });
+//                 }
+//                 whereConditions[attr] = {
+//                     [Op.in]: values
+//                 };
+//             }
+//         }
+        
+//         const products= await db.Products.findAll({
+//             include: [
+//                 {
+//                   model: db.ProductAttributes,
+//                   as: 'attributeValues',
+//                   required: true,
+//                   attributes: { exclude: ['createdAt','updatedAt'] },
+//                   include: [
+//                     {
+//                       model: db.CategoryAttributeValues,
+//                     //   as: 'attribute', 
+//                       attributes: { exclude: ['createdAt','updatedAt'] },
+//                       where: whereConditions ,
+//                       include:[{
+//                         model:db.Attributes,
+//                         attributes: { exclude: ['createdAt','updatedAt'] },
+//                         as: 'attribute',
+                        
+//                       }]
+                      
+//                     },
+//                   ],
+//                 },
+//               ],
+              
+//         });
+//         return res.status(200).json({products, whereConditions});
+//     }catch(err){
+//         return res.status(500).json({message:err.message}); 
+//     }
+
+// }
+
 exports.productByAttribute=async(req, res)=>{
 
-    const {categoryId} = req.query;
-    const validAttributes = ['color', 'size', 'brand']; 
-
-    // Validate query parameters
-    const queryAttributes = Object.keys(req.query).filter(key => validAttributes.includes(key));
-    const invalidKeys = Object.keys(req.query).filter(key => !validAttributes.includes(key) && key !== 'categoryId');
-
-    if (invalidKeys.length > 0) {
-        return res.status(400).json({ message: `Invalid query parameter(s): ${invalidKeys.join(', ')}` });
-    }
+    const {categoryId, attributeId, arrayvalues} =req.query;
+    const valuesArray = Array.isArray(arrayvalues) ? arrayvalues : [arrayvalues];
+    const categoryIds = Array.isArray(categoryId) ? categoryId : [categoryId];
 
     console.log(req.query);
-    console.log(queryAttributes);
+
+    const schema = Joi.object({
+        categoryId: Joi.number().integer().required().messages({
+            'number.base': 'categoryId must be a number.',
+            'number.integer': 'categoryId must be an integer.',
+            'number.required': 'categoryId is required.',
+        }),
+        attributeId: Joi.number().integer().required().messages({
+            'number.base': 'attributeId must be a number.',
+            'number.integer': 'attributeId must be an integer.',
+            'number.required': 'attributeId is required.',
+        }),
+        arrayvalues:Joi.array(),
+    });
+
+    const { error, value } = schema.validate({
+        categoryId:categoryId,
+        attributeId:attributeId,
+        arrayvalues:valuesArray
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
+    
     try{
-        const categoryAttributes = await db.CategoryAttributeValues.findAll({
-            where: { categoryId:categoryId },
+        const attributevalues= await db.CategoryAttributeValues.findAll({
+            where:{
+                [Op.and]:[
+                    {categoryId:{[Op.in]:categoryIds}},
+                    {attributeId:req.query.attributeId},
+                    {value:{[Op.in]:valuesArray}}
+                ]
+            }
+        });
+
+        const attributevalueIds=[];
+        attributevalues.forEach(attrvalue=>{
+            attributevalueIds.push(attrvalue.id);
+        });
+        
+        const product = await db.Products.findAll({
             include: [
                 {
-                    model: db.Attributes,
-                    attributes: ['name'], 
-                    as: 'attribute'
-                }
-            ]
-        });
-        
-        // Create a mapping of attribute names to valid values
-        const attributeMap = {};
-        categoryAttributes.forEach(attr => {
-            const attrName = attr.attribute.name; 
-            if (!attributeMap[attrName]) {
-                attributeMap[attrName] = [];
-            }
-            attributeMap[attrName].push(attr.value); 
-        });
-        console.log('attributeMap: ',attributeMap);
-
-        
-        const whereConditions = { [Op.and]: [] };
-
-        for (const attr of queryAttributes) {
-            if (req.query[attr]) {
-                const values = Array.isArray(req.query[attr]) ? req.query[attr] : [req.query[attr]];
-                console.log('value: ',values);
-                // // Ensure the values are valid for the attribute
-                if (values.some(value => !attributeMap[attr]?.includes(value))) {
-                    return res.status(400).json({ message: `Invalid value for ${attr}` });
-                }
-                whereConditions[Op.and].push({
-                    value: {
-                        [Op.in]: values
-                    }
-                });
-            }
-        }
-        
-        const products= await db.Products.findAll({
-            include: [
+                    model: db.Categories,
+                    // required: true,
+                    as: 'categories',
+                    attributes: { exclude: ['createdAt','updatedAt'] },
+                    
+                    include: [
+                        {
+                            model: db.Categories,
+                            as: 'parent',
+                            attributes: { exclude: ['createdAt','updatedAt','id',] },
+                        }
+                    ],
+                },
                 {
                   model: db.ProductAttributes,
                   as: 'attributeValues',
                   required: true,
                   attributes: { exclude: ['createdAt','updatedAt'] },
+                  where:{
+                    attributeValueId:{
+                        [Op.in]:attributevalueIds
+                    }
+                  },
                   include: [
                     {
                       model: db.CategoryAttributeValues,
-                    //   as: 'attribute', 
                       attributes: { exclude: ['createdAt','updatedAt'] },
-                      where: whereConditions ,
                       include:[{
                         model:db.Attributes,
                         attributes: { exclude: ['createdAt','updatedAt'] },
@@ -834,13 +929,12 @@ exports.productByAttribute=async(req, res)=>{
                       
                     },
                   ],
-                },
+                }
               ],
-              
         });
-        return res.status(200).json({products, whereConditions});
-    }catch(err){
-        return res.status(500).json({message:err.message}); 
-    }
+        return res.status(200).json(product);
 
+    }catch(err){
+        return res.status(500).json({message:err.message});
+    }
 }
