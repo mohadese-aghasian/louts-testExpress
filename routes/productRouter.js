@@ -789,13 +789,17 @@ const swaggerSpec = require('../swaggerConfig');
  *         name: categoryId
  *         required: true
  *         schema:
- *           type: integer
+ *           type: array
+ *           items:
+ *             type: integer
  *         description: The ID of the category to filter products.
  *       - in: query
  *         name: attributeId
  *         required: true
  *         schema:
- *           type: integer
+ *           type: array
+ *           items:
+ *             type: integer
  *         description: The ID of the attribute to filter products.
  *       - in: query
  *         name: arrayvalues
