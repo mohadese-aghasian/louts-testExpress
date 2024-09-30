@@ -755,6 +755,42 @@ exports.searchProducts=async(req, res)=>{
     }
 }
 
+exports.getAttributesByCategory=async(req, res)=>{
+    
+    const { categoryId }=req.query;
+        
+        const schema = Joi.object({
+            categoryId: Joi.number().integer().required().messages({
+                'number.base': 'categoryId must be a number.',
+                'number.integer': 'categoryId must be an integer.',
+                'number.required': 'categoryId is required.',
+            }),
+        });
+        const { error, value } = schema.validate({
+            categoryId:categoryId,
+        });
+        if(error){
+            return res.status(400).json({message:error.details[0].message});
+        }
+
+    try{
+        const attributes= await db.CategoryAttributeValues.findAll({
+            where:{
+                categoryId:categoryId
+            },
+            include:[{
+                model:db.Attributes,
+                as: 'attribute',
+                attributes: { exclude: ['createdAt','updatedAt'] },
+            }]
+        });
+
+        return res.status(200).json(attributes);
+    }catch(err){
+        return res.status(500).json({message:err.message});
+    }
+}
+
 exports.productByAttribute=async(req, res)=>{
 
     const {categoryId, attributeId, arrayvalues} =req.query;
@@ -778,14 +814,14 @@ exports.productByAttribute=async(req, res)=>{
         arrayvalues:Joi.array(),
     });
 
-    // const { error, value } = schema.validate({
-    //     categoryId:categoryId,
-    //     attributeId:attributeId,
-    //     arrayvalues:valuesArray
-    // });
-    // if(error){
-    //     return res.status(400).json({message:error.details[0].message});
-    // }
+    const { error, value } = schema.validate({
+        categoryId:categoryId,
+        attributeId:attributeId,
+        arrayvalues:valuesArray
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
     
     try{
         const attributevalues= await db.CategoryAttributeValues.findAll({

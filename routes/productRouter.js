@@ -830,6 +830,75 @@ const swaggerSpec = require('../swaggerConfig');
  *         description: Internal server error
  */
 
+/**
+ * @swagger
+ * /attributesofcategory:
+ *   get:
+ *     summary: Retrieve attributes by category
+ *     description: Returns a list of attributes for a specific category, including the attribute details.
+ *     tags:
+ *       - Attributes
+ *     parameters:
+ *       - in: query
+ *         name: categoryId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The ID of the category to retrieve attributes for
+ *     responses:
+ *       200:
+ *         description: A list of attributes for the specified category
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The attribute ID
+ *                     example: 1
+ *                   name:
+ *                     type: string
+ *                     description: The name of the attribute
+ *                     example: Color
+ *                   attribute:
+ *                     type: object
+ *                     description: Details of the attribute
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         description: The ID of the attribute
+ *                         example: 1
+ *                       name:
+ *                         type: string
+ *                         description: The name of the attribute
+ *                         example: Color
+ *       400:
+ *         description: Bad Request - Invalid or missing categoryId
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message detailing what went wrong
+ *                   example: "categoryId must be a number."
+ *       500:
+ *         description: Internal Server Error - Something went wrong on the server
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: The error message
+ *                   example: "Internal server error"
+ */
+
 
 /////////////////////////////////
 
@@ -848,6 +917,7 @@ productRouter.get("/menu/bypath", productController.menuByPass);
 productRouter.get('/menu', productController.menu);
 
 productRouter.get('/productbyattr', productController.productByAttribute);
+productRouter.get('/attributesofcategory',productController.getAttributesByCategory);
 
 ////////////////
 productRouter.use('api/v3/api-docs', swaggerUi.serve);
