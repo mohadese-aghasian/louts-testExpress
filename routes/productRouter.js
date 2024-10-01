@@ -134,7 +134,16 @@ const swaggerSpec = require('../swaggerConfig');
  *           default: ASC
  *           example: ASC
  *         description: The direction in which to sort the products (ascending or descending).
-
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: integer
+ *         description: minimum price
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: integer
+ *         description: maximum price
  *     responses:
  *       200:
  *         description: A list of products
@@ -810,6 +819,16 @@ const swaggerSpec = require('../swaggerConfig');
  *             type: string
  *           example: ["s", "m", "l"]
  *         description: The values of the attribute to filter products.
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: integer
+ *         description: minimum price
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: integer
+ *         description: maximum price
  *     responses:
  *       200:
  *         description: A list of products matching the criteria

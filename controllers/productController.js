@@ -6,7 +6,9 @@ const {  where, Op, Sequelize } = require('sequelize');
 const Joi = require("joi");
 const path = require('path');
 const sharp = require('sharp');
-const { name } = require('ejs');
+const { Interface } = require('readline');
+const { measureMemory } = require('vm');
+
 
 
 exports.menuByPass=async(req, res)=>{
@@ -92,15 +94,18 @@ exports.menu=async(req, res)=>{
 }
 
 exports.products=async(req, res)=>{
-    const {limit, start, orderby, orderdir ,searchtext} = req.query;
+    
+    const {limit, start, orderby, orderdir ,searchtext, minPrice, maxPrice} = req.query;
     const limitClause = limit ? parseInt(limit, 10) : undefined;
     const offsetClause = start ? parseInt(start, 10) : undefined;
 
+    
     // Default to ordering by 'id' if no column is specified 
     const orderColumn = orderby || 'id'; 
     // Default to 'ASC' if no direction is specified
     const orderDirection = orderdir === 'DESC' ? 'DESC' : 'ASC'; 
 
+    
     const schema = Joi.object({
         searchtext: Joi.string().max(100).default(" ").messages({
             'string.max': 'Search text must be 100 characters or fewer.'
@@ -123,6 +128,8 @@ exports.products=async(req, res)=>{
         category: Joi.string().default(null).messages({
             'string.empty': 'Category is required',
         }),
+        minPrice: Joi.number().precision(2).positive().optional(), 
+        maxPrice: Joi.number().precision(2).positive().optional(),
     });
     
     const { error, value } = schema.validate({
@@ -132,9 +139,28 @@ exports.products=async(req, res)=>{
         orderBy: orderColumn,
         orderDirection: orderDirection,
         category:req.query.category,
+        minPrice:minPrice, 
+        maxPrice:maxPrice,
     });
     if(error){
         return res.status(400).json({message:error.details[0].message});
+    }
+
+    let priceWhereClause;
+    if (minPrice !== undefined && maxPrice !== undefined) {
+        priceWhereClause = {
+            [Op.and]: [
+                { price:{ [Op.gte]: parseFloat(minPrice)} },
+                { price: {[Op.lte]: parseFloat(maxPrice)} }
+            ]
+        };
+    }else if(minPrice || maxPrice){
+       priceWhereClause = {
+        ...(minPrice !== undefined && { price: { [Op.gte]: parseFloat(minPrice) } }), 
+        ...(maxPrice !== undefined && { price: { [Op.lte]: parseFloat(maxPrice) } }),
+        };
+    }else{
+        priceWhereClause={};
     }
     const searchquery=value.searchtext.split(' ').join("|");
 
@@ -158,89 +184,114 @@ exports.products=async(req, res)=>{
             order: [[orderColumn, orderDirection]],
             attributes: { exclude: ['createdAt','updatedAt'] },
             where:{
-                [Op.or]:[
-                    {title:{
-                        [Op.substring] : value.searchtext,
-                        
-                    }},
-                    {description:{
-                        [Op.substring] : value.searchtext,
-                    }}
-                ]
+                [Op.and]:[
+                    {
+                        [Op.or]:[
+                            {title:{
+                                [Op.substring] : value.searchtext,
+                                
+                            }},
+                            {description:{
+                                [Op.substring] : value.searchtext,
+                            }}
+                        ],
+                    },
+                    priceWhereClause
+            ]
             },
-        include:[{
-            model: db.Categories,
-            required: true,
-            as: 'categories',
-            attributes: { exclude: ['createdAt','updatedAt'] },
-            where: category ? { id : categoryExists.id } : {},
-            // include: [
-            //     {
-            //         model: db.Categories,
-            //         as: 'parent',
-            //         attributes: { exclude: ['createdAt','updatedAt','id',] },
-            //     }],
-            }],
-        // include: [
-        //     {
-        //         model: db.ProductAttributes,
-        //         as: 'attributeValues',
-        //         attributes: { exclude: ['createdAt','updatedAt'] },
+            include:[
+                {
+                    model:db.ProductCovers,
+                    as: 'cover',
+                    attributes:['name'],
+                },
+                {
+                    model: db.Categories,
+                    required: true,
+                    as: 'categories',
+                    attributes: { exclude: ['createdAt','updatedAt'] },
+                    where: category ? { id : categoryExists.id } : {},
+                    include: [
+                        {
+                            model: db.Categories,
+                            as: 'parent',
+                            attributes: { exclude: ['createdAt','updatedAt','id',] },
+                        }],
+                },
+                {
+                    model: db.ProductAttributes,
+                    as: 'attributeValues',
+                    attributes: { exclude: ['createdAt','updatedAt'] },
+                    
+                    include: [
+                        {
+                        model: db.CategoryAttributeValues,
+                        //   as: 'attribute', 
+                        attributes: { exclude: ['createdAt','updatedAt'] },
+                        
+                        },
+                    ],
+                },
                 
-        //         include: [
-        //             {
-        //               model: db.CategoryAttributeValues,
-        //             //   as: 'attribute', 
-        //               attributes: { exclude: ['createdAt','updatedAt'] },
-                      
-        //             },
-        //           ],
-        //     },
-        //     ],
+            ],
+        
         });
         if(products.length === 0){
             products = await db.Products.findAll({
+                
                 limit:limitClause,
                 offset:offsetClause,
                 order: [[orderColumn, orderDirection]],
                 where:{
-                    [Op.or]:[
-                        {title:{
-                            [Op.regexp] : searchquery,
-                            
-                        }},
-                        {description:{
-                            [Op.regexp]: searchquery
-                        }}
-                    ]
-                },
-                include:[{
-                    model: db.Categories,
-                    required: true,
-                    as: 'categories',
-                    attributes: { exclude: ['createdAt','updatedAt','id'] },
-                    where: category ? { id : categoryExists.id } : {},
-                    include: [
+                    [Op.and]:[
                         {
-                          model: db.Categories,
-                          as: 'parent',
-                          attributes: { exclude: ['createdAt','updatedAt','id'] },
-                        }],
-                    }],
-                include: [
+                            [Op.or]:[
+                                {title:{
+                                    [Op.regexp] : searchquery,
+                                    
+                                }},
+                                {description:{
+                                    [Op.regexp]: searchquery
+                                }}
+                            ]
+                        },
+                        priceWhereClause
+                ]
+                },
+                include:[
                     {
-                        model: db.ProductAttributeValues,
+                        model:db.ProductCovers,
+                        as: 'cover',
+                        attributes:['name'],
+                    },
+                    {
+                        model: db.Categories,
+                        required: true,
+                        as: 'categories',
+                        attributes: { exclude: ['createdAt','updatedAt'] },
+                        where: category ? { id : categoryExists.id } : {},
+                        include: [
+                            {
+                                model: db.Categories,
+                                as: 'parent',
+                                attributes: { exclude: ['createdAt','updatedAt','id',] },
+                            }],
+                    },
+                    {
+                        model: db.ProductAttributes,
                         as: 'attributeValues',
                         attributes: { exclude: ['createdAt','updatedAt'] },
+                        
                         include: [
-                        {
-                            model: db.Attributes,
-                            as: 'attribute', 
-                            attributes: { exclude: ['createdAt','updatedAt','id'] },
+                            {
+                            model: db.CategoryAttributeValues,
+                            //   as: 'attribute', 
+                            attributes: { exclude: ['createdAt','updatedAt'] },
                             
-                        },
+                            },
                         ],
                     },
+                    
                     ],
             }); 
         }
@@ -655,6 +706,7 @@ exports.addFavourite=async(req, res)=>{
 
 exports.oneProduct=async(req, res)=>{
     const {productId}=req.params;
+    
     const schema = Joi.object({
         id: Joi.string().pattern(/^\d+$/).required(), // only integer
     });
@@ -666,23 +718,42 @@ exports.oneProduct=async(req, res)=>{
     try{
         const product= await db.Products.findOne({
             where:{id: parseInt(productId, 10)},
-            include:[{
-                model: db.Categories,
-                required: false,
-                as: 'categories',
-                include: [
-                    {
-                      model: db.Categories,
-                      as: 'parent',
-                    //   include: [
-                    //     {
-                    //       model: db.Categories,
-                    //       as: 'parent', 
-                    //       required: false,
-                    //     },
-                    //   ],
-                    }],
-                }],
+            attributes: { exclude: ['createdAt','updatedAt'] },
+            include:[
+                {
+                    model:db.ProductCovers,
+                    as: 'cover',
+                    attributes:['name'],
+                },
+                {
+                    model: db.Categories,
+                    required: true,
+                    as: 'categories',
+                    attributes: { exclude: ['createdAt','updatedAt'] },
+                    include: [
+                        {
+                            model: db.Categories,
+                            as: 'parent',
+                            attributes: { exclude: ['createdAt','updatedAt','id',] },
+                        }],
+                },
+                {
+                    model: db.ProductAttributes,
+                    as: 'attributeValues',
+                    attributes: { exclude: ['createdAt','updatedAt'] },
+                    
+                    include: [
+                        {
+                        model: db.CategoryAttributeValues,
+                        //   as: 'attribute', 
+                        attributes: { exclude: ['createdAt','updatedAt'] },
+                        
+                        },
+                    ],
+                },
+                
+                ],
+            
         });
         if(!product){
             return res.json({message:"no product was found for this ID"})
@@ -774,6 +845,10 @@ exports.getAttributesByCategory=async(req, res)=>{
         }
 
     try{
+        const isCategoryExist= await db.Categories.findByPk(categoryId);
+        if (!isCategoryExist){
+            return res.status(400).json({message:'category not found'});
+        }
         const attributes= await db.CategoryAttributeValues.findAll({
             where:{
                 categoryId:categoryId
@@ -782,10 +857,49 @@ exports.getAttributesByCategory=async(req, res)=>{
                 model:db.Attributes,
                 as: 'attribute',
                 attributes: { exclude: ['createdAt','updatedAt'] },
+            },
+            {
+               model:db.Categories,
+               as: 'category',
+               attributes: ['name'],
+               attributes: { exclude: ['createdAt','updatedAt'] },
             }]
+        }); 
+        
+        var minprice = await db.Products.findAll({
+            order: [['price', 'ASC']], // ASC for min , DESC for max
+            limit: 1,
+            attributes:['price'],
+            include:[{
+                model: db.Categories,
+                as: 'categories',
+                attributes:[],
+                where:{ id:categoryId }}]
+            });
+        var maxprice = await db.Products.findAll({
+            order: [['price', 'DESC']], // Sort by price in descending order
+            limit: 1,
+            attributes:['price'],
+            include:[{
+                model: db.Categories,
+                as: 'categories',
+                attributes:[],
+                where:{ id:categoryId }}]
         });
 
-        return res.status(200).json(attributes);
+        if(minprice.lenght===0 || maxprice.length===0){
+            maxprice=0;
+            minprice=0;
+        }
+        const attributesOfCategory={};
+        attributes.forEach(attrValue=>{
+            if(!attributesOfCategory[attrValue.attribute.name]){
+                attributesOfCategory[attrValue.attribute.name]=[];
+            }
+            attributesOfCategory[attrValue.attribute.name].push(attrValue.value);
+        });
+        console.log(attributesOfCategory);
+        return res.status(200).json({attributesOfCategory, minprice:minprice, maxprice:maxprice});
     }catch(err){
         return res.status(500).json({message:err.message});
     }
@@ -793,34 +907,69 @@ exports.getAttributesByCategory=async(req, res)=>{
 
 exports.productByAttribute=async(req, res)=>{
 
-    const {categoryId, attributeId, arrayvalues} =req.query;
+    const {categoryId, attributeId, arrayvalues, minPrice, maxPrice} =req.query;
     const valuesArray = Array.isArray(arrayvalues) ? arrayvalues : [arrayvalues];
     const categoryIds = Array.isArray(categoryId) ? categoryId : [categoryId];
     const attributeIds = Array.isArray(attributeId) ? attributeId : [attributeId];
 
     console.log(req.query);
+    
 
     const schema = Joi.object({
-        categoryId: Joi.number().integer().required().messages({
-            'number.base': 'categoryId must be a number.',
-            'number.integer': 'categoryId must be an integer.',
-            'number.required': 'categoryId is required.',
+        categoryId: Joi.array()
+        .items(Joi.number().integer())
+        .required() // Optional: Add this if you want to require the array
+        .messages({
+            'array.base': 'attributeId must be an array.',
+            'array.includes': 'attributeId must contain only integers.',
+            'array.required': 'attributeId is required.',
         }),
-        attributeId: Joi.number().integer().required().messages({
-            'number.base': 'attributeId must be a number.',
-            'number.integer': 'attributeId must be an integer.',
-            'number.required': 'attributeId is required.',
+        attributeId: Joi.array()
+        .items(Joi.number().integer())
+        .required() // Optional: Add this if you want to require the array
+        .messages({
+            'array.base': 'categoryId must be an array.',
+            'array.includes': 'categoryId must contain only integers.',
+            'array.required': 'categoryId is required.',
         }),
-        arrayvalues:Joi.array(),
+        arrayvalues:Joi.array()
+        .items(Joi.string())
+        .required() // Optional: Add this if you want to require the array
+        .messages({
+            'array.base': 'arrayvalues must be an array.',
+            'array.includes': 'arrayvalues must contain only strings.',
+            'array.required': 'arrayvalues is required.',
+        }),
+        minPrice: Joi.number().precision(2).positive().optional(), 
+        maxPrice: Joi.number().precision(2).positive().optional(),
     });
 
     const { error, value } = schema.validate({
-        categoryId:categoryId,
-        attributeId:attributeId,
-        arrayvalues:valuesArray
+        categoryId:categoryIds,
+        attributeId:attributeIds,
+        arrayvalues:valuesArray,
+        minPrice:minPrice,
+        maxPrice:maxPrice,
     });
     if(error){
         return res.status(400).json({message:error.details[0].message});
+    }
+
+    let priceWhereClause;
+    if (minPrice !== undefined && maxPrice !== undefined) {
+        priceWhereClause = {
+            [Op.and]: [
+                { price:{ [Op.gte]: parseFloat(minPrice)} },
+                { price: {[Op.lte]: parseFloat(maxPrice)} }
+            ]
+        };
+    }else if(minPrice || maxPrice){
+       priceWhereClause = {
+        ...(minPrice !== undefined && { price: { [Op.gte]: parseFloat(minPrice) } }), 
+        ...(maxPrice !== undefined && { price: { [Op.lte]: parseFloat(maxPrice) } }),
+        };
+    }else{
+        priceWhereClause={};
     }
     
     try{
@@ -840,6 +989,8 @@ exports.productByAttribute=async(req, res)=>{
         });
         
         const product = await db.Products.findAll({
+            attributes: { exclude: ['createdAt','updatedAt'] },
+            where:priceWhereClause,
             include: [
                 {
                     model: db.Categories,
@@ -859,7 +1010,7 @@ exports.productByAttribute=async(req, res)=>{
                   model: db.ProductAttributes,
                   as: 'attributeValues',
                   required: true,
-                  attributes: { exclude: ['createdAt','updatedAt'] },
+                  attributes: { exclude: ['createdAt','updatedAt', 'productId'] },
                   where:{
                     attributeValueId:{
                         [Op.in]:attributevalueIds

@@ -54,6 +54,10 @@ module.exports=(sequelize,DataTypes)=>{
         // as: 'productAttributes'
       });
       
+      CategoryAttributeValue.belongsTo(models.Categories, {
+        foreignKey: 'categoryId',
+        as: 'category'
+      })
 
 
     }
