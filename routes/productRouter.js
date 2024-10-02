@@ -104,6 +104,14 @@ const swaggerSpec = require('../swaggerConfig');
  *     tags: [Products]
  *     parameters:
  *       - in: query
+ *         name: categoryId
+ *         required: true
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: integer
+ *         description: The ID of the category to filter products.
+ *       - in: query
  *         name: searchtext
  *         schema:
  *           type: string
