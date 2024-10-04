@@ -8,6 +8,7 @@ const path = require('path');
 const sharp = require('sharp');
 const { Interface } = require('readline');
 const { measureMemory } = require('vm');
+const { name } = require('ejs');
 
 
 
@@ -1083,6 +1084,104 @@ exports.productByAttribute=async(req, res)=>{
         });
         return res.status(200).json(product);
 
+    }catch(err){
+        return res.status(500).json({message:err.message});
+    }
+}
+
+exports.addNewAttribute=async(req ,res)=>{
+
+    const { attributeName }=req.body;
+    try{
+        const newAttribute=await db.Attributes.create({
+            name:attributeName
+        });
+        return res.status(201).json(newAttribute);
+
+    }catch(err){
+        return res.status(500).json({message:err.message});
+    }
+}
+exports.updateAttribute=async(req, res)=>{
+
+    const {attributeId, newName}=req.body;
+    try{
+        const modifiedAttribute=await db.Attributes.update(
+            {name:newName},
+            {
+                where:{
+                id:attributeId,
+            }
+        });
+        return res.status(201).json(modifiedAttribute);
+    }catch(err){
+        return res.status(500).json({message:err.message});
+    }
+}
+exports.addAttributeValue=async(req, res)=>{
+
+    const {attributeId, categoryId, thevalue} =req.body;
+    const schema = Joi.object({
+        categoryId: Joi.number().integer().required().messages({
+            'number.base': 'categoryId must be a number.',
+            'number.integer': 'categoryId must be an integer.',
+            'number.required': 'categoryId is required.',
+        }),
+        attributeId: Joi.number().integer().required().messages({
+            'number.base': 'attributeId must be a number.',
+            'number.integer': 'attributeId must be an integer.',
+            'number.required': 'attributeId is required.',
+        }),
+        thevalue: Joi.string().required().messages({
+            'string.empty': 'value is required',
+            'any.required': 'value is required'
+        }),
+    });
+    const { error, value } = schema.validate({
+        categoryId:categoryId,
+        attributeId:attributeId,
+        thevalue:thevalue,
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
+    try{
+        const newAttributeValue= await db.CategoryAttributeValues.create({
+            attributeId:attributeId,
+            categoryId:categoryId, 
+            value:thevalue 
+        });
+        return res.status(201).json(newAttributeValue);
+    }catch(err){
+        return res.status(500).json({message:err.message});
+    }
+}
+exports.addCategory=async(req, res)=>{
+    const { name, parentId } =req.body;
+    
+    const schema = Joi.object({
+        parentId: Joi.number().integer().default(null).messages({
+            'number.base': 'parentId must be a number.',
+            'number.integer': 'parentId must be an integer.',
+        }),
+        name: Joi.string().required().messages({
+            'string.empty': 'name is required',
+            'any.required': 'name is required'
+        }),
+    });
+    const { error, value } = schema.validate({
+        parentId:parentId,
+        name:name,
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
+    try{
+        const newCategory=await db.Categories.create({
+            name:value.name, 
+            parentId:parentId,
+        });
+        return res.status(201).json(newCategory);
     }catch(err){
         return res.status(500).json({message:err.message});
     }

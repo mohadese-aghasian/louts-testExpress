@@ -926,6 +926,252 @@ const swaggerSpec = require('../swaggerConfig');
  *                   example: "Internal server error"
  */
 
+/**
+ * @swagger
+ * /newAttribute:
+ *   post:
+ *     summary: Add a new attribute
+ *     description: Creates a new attribute with the provided name.
+ *     tags: 
+ *       - Attributes
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - attributeName
+ *             properties:
+ *               attributeName:
+ *                 type: string
+ *                 description: Name of the attribute to be added.
+ *                 example: Color
+ *     responses:
+ *       201:
+ *         description: Attribute created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   description: ID of the newly created attribute.
+ *                 name:
+ *                   type: string
+ *                   description: Name of the newly created attribute.
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message.
+ *                   example: "Internal server error"
+ */
+
+/**
+ * @swagger
+ * /updateattribute:
+ *   patch:
+ *     summary: Update an existing attribute
+ *     description: Updates the name of an existing attribute based on its ID.
+ *     tags: 
+ *       - Attributes
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - attributeId
+ *               - newName
+ *             properties:
+ *               attributeId:
+ *                 type: integer
+ *                 description: ID of the attribute to be updated.
+ *                 example: 1
+ *               newName:
+ *                 type: string
+ *                 description: New name for the attribute.
+ *                 example: Size
+ *     responses:
+ *       200:
+ *         description: Attribute updated successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 affectedRows:
+ *                   type: integer
+ *                   description: Number of rows affected (should be 1 if successful).
+ *                 message:
+ *                   type: string
+ *                   description: Update result message.
+ *                   example: "Attribute updated successfully."
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message.
+ *                   example: "Internal server error"
+ */
+
+/**
+ * @swagger
+ * /addAttributevalue:
+ *   post:
+ *     summary: Add a new attribute value to a category
+ *     description: Creates a new attribute value associated with a specific attribute and category.
+ *     tags: 
+ *       - Attribute Values
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - attributeId
+ *               - categoryId
+ *               - thevalue
+ *             properties:
+ *               attributeId:
+ *                 type: integer
+ *                 description: The ID of the attribute.
+ *                 example: 1
+ *               categoryId:
+ *                 type: integer
+ *                 description: The ID of the category.
+ *                 example: 2
+ *               thevalue:
+ *                 type: string
+ *                 description: The value of the attribute to be added.
+ *                 example: "Red"
+ *     responses:
+ *       201:
+ *         description: Attribute value created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   description: The ID of the newly created attribute value.
+ *                 attributeId:
+ *                   type: integer
+ *                 categoryId:
+ *                   type: integer
+ *                 value:
+ *                   type: string
+ *                   description: The value of the newly created attribute.
+ *       400:
+ *         description: Validation error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Detailed error message.
+ *                   example: "categoryId must be an integer."
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message.
+ *                   example: "Internal server error"
+ */
+
+/**
+ * @swagger
+ * /addnewcategory:
+ *   post:
+ *     summary: Add a new category
+ *     description: Creates a new category. A category may have an optional parent category.
+ *     tags: 
+ *       - Categories
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The name of the category.
+ *                 example: "Electronics"
+ *               parentId:
+ *                 type: integer
+ *                 description: The ID of the parent category (optional).
+ *                 example: 1
+ *     responses:
+ *       201:
+ *         description: Category created successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   description: The ID of the newly created category.
+ *                 name:
+ *                   type: string
+ *                   description: Name of the new category.
+ *                 parentId:
+ *                   type: integer
+ *                   description: The ID of the parent category (if any).
+ *       400:
+ *         description: Validation error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Detailed error message.
+ *                   example: "name is required."
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message.
+ *                   example: "Internal server error"
+ */
 
 /////////////////////////////////
 
@@ -938,13 +1184,18 @@ productRouter.get("/products/oneproduct/:productId", productController.oneProduc
 productRouter.get("/products/favourites", authenticateJWT, productController.getFavourites);
 productRouter.get("/products/search", productController.searchProducts);
 productRouter.get("/products/filter", productController.filter);
+productRouter.get('/productbyattr', productController.productByAttribute);
 
 productRouter.get("/products2", productController.products2);
 productRouter.get("/menu/bypath", productController.menuByPass);
 productRouter.get('/menu', productController.menu);
 
-productRouter.get('/productbyattr', productController.productByAttribute);
+
 productRouter.get('/attributesofcategory',productController.getAttributesByCategory);
+productRouter.post('/newAttribute', productController.addNewAttribute);
+productRouter.patch('/updateattribute', productController.updateAttribute);
+productRouter.post('/addAttributevalue', productController.addAttributeValue);
+productRouter.post('/addnewcategory', productController.addCategory);
 
 ////////////////
 productRouter.use('api/v3/api-docs', swaggerUi.serve);
