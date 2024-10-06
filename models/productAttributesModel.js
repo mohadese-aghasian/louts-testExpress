@@ -31,7 +31,17 @@ module.exports=(sequelize,DataTypes)=>{
             allowNull: false,
             type:DataTypes.DATE,
           } 
-    });
+    },
+    {
+      // Define the composite unique constraint
+      indexes: [
+          {
+              unique: true,
+              fields: ['productId', 'attributeValueId'],
+              name:'unique_product_attribute_value',
+          },
+      ],
+  });
 
     ProductAttribute.associate = (models) =>{
 

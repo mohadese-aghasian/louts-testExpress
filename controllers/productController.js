@@ -9,8 +9,16 @@ const sharp = require('sharp');
 const { Interface } = require('readline');
 const { measureMemory } = require('vm');
 const { name } = require('ejs');
+const NodeCache = require("node-cache");
+const { el } = require('@faker-js/faker');
+const Redis = require('ioredis');
+const { Json } = require('sequelize/lib/utils');
+const { stringify } = require('querystring');
 
-
+//////////////// CACHE //////
+// const myCache = new NodeCache();
+const redis = new Redis(); // Default: localhost:6379
+/////////////////////////////
 
 exports.menuByPass=async(req, res)=>{
     try{
@@ -155,7 +163,6 @@ exports.products=async(req, res)=>{
         .messages({
             'array.base': 'arrayvalues must be an array.',
             'array.includes': 'arrayvalues must contain only strings.',
-            'array.required': 'arrayvalues is required.',
         }),
     });
     
@@ -650,9 +657,19 @@ exports.addProduct=async(req, res)=>{
     }
 
     try {
-        const categoryid = db.Categories.findByPk(categoryId);
-        if(!categoryid){
-            return res.status.json({message:"category not found!"});
+        const cachedCategories=await myCache.get(`category:${categoryId}`);
+        let isCategoryExist;
+
+        if(cachedCategories){
+            console.log('restore category from cache***');
+            isCategoryExist=cachedCategories;
+        }else{
+            isCategoryExist= await db.Categories.findByPk(categoryId);
+            await myCache.set(`category:${categoryId}`, JSON.stringify(isCategoryExist));
+        }
+
+        if (!isCategoryExist){
+            return res.status(400).json({message:'category not found'});
         }
     
         const newproduct = await db.Products.create({
@@ -661,10 +678,17 @@ exports.addProduct=async(req, res)=>{
             price: price,
             coverId:coverId
         });
+
+         // cache key = product:[id]
+        // await myCache.set(`product:${newproduct.id}`, newproduct);
+
         const productcategory= await db.ProductCategories.create({
             productId:newproduct.id,
             categoryId:categoryId
         });
+        // cache key = productCategory:[productId:categoryId]
+        // Cache
+        // await myCache.set(`productCategory:${newproduct.id+":"+categoryId}`);
 
         res.status(201).json({ message: 'File uploaded and processed successfully', newproduct , productcategory});
     } catch (error) {
@@ -757,6 +781,7 @@ exports.addFavourite=async(req, res)=>{
 
 exports.oneProduct=async(req, res)=>{
     const {productId}=req.params;
+    // cache key = product:[id]
     
     const schema = Joi.object({
         id: Joi.string().pattern(/^\d+$/).required(), // only integer
@@ -767,49 +792,64 @@ exports.oneProduct=async(req, res)=>{
     }
 
     try{
-        const product= await db.Products.findOne({
-            where:{id: parseInt(productId, 10)},
-            attributes: { exclude: ['createdAt','updatedAt'] },
-            include:[
-                {
-                    model:db.ProductCovers,
-                    as: 'cover',
-                    attributes:['name'],
-                },
-                {
-                    model: db.Categories,
-                    required: true,
-                    as: 'categories',
-                    attributes: { exclude: ['createdAt','updatedAt'] },
-                    include: [
-                        {
-                            model: db.Categories,
-                            as: 'parent',
-                            attributes: { exclude: ['createdAt','updatedAt','id',] },
-                        }],
-                },
-                {
-                    model: db.ProductAttributes,
-                    as: 'attributeValues',
-                    attributes: { exclude: ['createdAt','updatedAt'] },
-                    
-                    include: [
-                        {
-                        model: db.CategoryAttributeValues,
-                        //   as: 'attribute', 
+        const iscached = await myCache.get(`product:${productId}`);
+        
+    
+        if(iscached){
+            // const product = redis.get(`peoduct:${productId}`);
+            // const product = JSON.parse(iscached);
+            console.log('restored from cache');
+            return res.status(200).json(JSON.parse(iscached));
+        }else{
+
+            const product= await db.Products.findOne({
+                where:{id: parseInt(productId, 10)},
+                attributes: { exclude: ['createdAt','updatedAt'] },
+                include:[
+                    {
+                        model:db.ProductCovers,
+                        as: 'cover',
+                        attributes:['name'],
+                    },
+                    {
+                        model: db.Categories,
+                        required: true,
+                        as: 'categories',
+                        attributes: { exclude: ['createdAt','updatedAt'] },
+                        include: [
+                            {
+                                model: db.Categories,
+                                as: 'parent',
+                                attributes: { exclude: ['createdAt','updatedAt','id',] },
+                            }],
+                    },
+                    {
+                        model: db.ProductAttributes,
+                        as: 'attributeValues',
                         attributes: { exclude: ['createdAt','updatedAt'] },
                         
-                        },
+                        include: [
+                            {
+                            model: db.CategoryAttributeValues,
+                            //   as: 'attribute', 
+                            attributes: { exclude: ['createdAt','updatedAt'] },
+                            
+                            },
+                        ],
+                    },
+                    
                     ],
-                },
                 
-                ],
+            });
+            if(!product){
+                return res.json({message:"no product was found for this ID"})
+            }
             
-        });
-        if(!product){
-            return res.json({message:"no product was found for this ID"})
+            await myCache.set(`product:${productId}`, JSON.stringify(product));
+
+            return res.status(200).json(product);
         }
-        res.json(product);
+
         
     }catch(err){
         res.status(500).json({message:err.message});
@@ -819,17 +859,27 @@ exports.oneProduct=async(req, res)=>{
 exports.getFavourites=async(req, res)=>{
     
     try{
-        const favourites =await db.FavouriteProducts.findAll({
-            where:{
-                userId: req.user.userId,
-            },
-            include: [{
-                model: db.Products,
-                required: true
-               }]
-        });
-
-        res.status(200).json(favourites);
+        // Cache key : favourite:[userId]
+        const cached = await myCache.get(`favourite:${req.user.userId}`);
+        if(cached){
+            console.log('restore from cache');
+            return res.status(200).json(cached);
+        }else{
+            const favourites =await db.FavouriteProducts.findAll({
+                where:{
+                    userId: req.user.userId,
+                },
+                include: [{
+                    model: db.Products,
+                    required: true
+                }]
+            });
+            
+            const plainFavourite=favourites.get({ plain: true });
+            await myCache.set(`favourite:${req.user.userId}`, plainFavourite);
+            return res.status(200).json(favourites);
+            
+        }
     }catch(err){
 
     }
@@ -878,6 +928,7 @@ exports.searchProducts=async(req, res)=>{
 
 exports.getAttributesByCategory=async(req, res)=>{
     
+    // cache key = attributes:[categoryId]
     const { categoryId }=req.query;
         
         const schema = Joi.object({
@@ -895,65 +946,87 @@ exports.getAttributesByCategory=async(req, res)=>{
         }
 
     try{
-        const isCategoryExist= await db.Categories.findByPk(categoryId);
+        // cache key = category:[categoryId]
+        const cachedCategories=await myCache.get(`category:${categoryId}`);
+        let isCategoryExist;
+
+        if(cachedCategories){
+            console.log('restore category from cache***');
+            isCategoryExist=cachedCategories;
+        }else{
+            isCategoryExist= await db.Categories.findByPk(categoryId);
+            await myCache.set(`category:${categoryId}`, JSON.stringify(isCategoryExist));
+        }
+
         if (!isCategoryExist){
             return res.status(400).json({message:'category not found'});
         }
-        const attributes= await db.CategoryAttributeValues.findAll({
-            where:{
-                categoryId:categoryId
-            },
-            include:[{
-                model:db.Attributes,
-                as: 'attribute',
-                attributes: { exclude: ['createdAt','updatedAt'] },
-            },
-            {
-               model:db.Categories,
-               as: 'category',
-               attributes: ['name'],
-               attributes: { exclude: ['createdAt','updatedAt'] },
-            }]
-        }); 
-        
-        var minprice = await db.Products.findAll({
-            order: [['price', 'ASC']], // ASC for min , DESC for max
-            limit: 1,
-            attributes:['price'],
-            include:[{
-                model: db.Categories,
-                as: 'categories',
-                attributes:[],
-                where:{ id:categoryId }}]
-            });
-        var maxprice = await db.Products.findAll({
-            order: [['price', 'DESC']], // Sort by price in descending order
-            limit: 1,
-            attributes:['price'],
-            include:[{
-                model: db.Categories,
-                as: 'categories',
-                attributes:[],
-                where:{ id:categoryId }}]
-        });
 
-        if(minprice.lenght===0 || maxprice.length===0){
-            maxprice=0;
-            minprice=0;
-        }
-        const attributesOfCategory={};
-        attributes.forEach(attrValue=>{
-            if(!attributesOfCategory[attrValue.attribute.name]){
-                attributesOfCategory[attrValue.attribute.name]=[];
+        const cached= await myCache.get(`attributes:${categoryId}`);
+        if(cached){
+            console.log('restore from cache');
+            return res.status(200).json(JSON.parse(cached));
+        }else{
+
+            const attributes= await db.CategoryAttributeValues.findAll({
+                where:{
+                    categoryId:categoryId
+                },
+                include:[{
+                    model:db.Attributes,
+                    as: 'attribute',
+                    attributes: { exclude: ['createdAt','updatedAt'] },
+                },
+                {
+                model:db.Categories,
+                as: 'category',
+                attributes: ['name'],
+                attributes: { exclude: ['createdAt','updatedAt'] },
+                }]
+            }); 
+            
+            var minprice = await db.Products.findAll({
+                order: [['price', 'ASC']], // ASC for min , DESC for max
+                limit: 1,
+                attributes:['price'],
+                include:[{
+                    model: db.Categories,
+                    as: 'categories',
+                    attributes:[],
+                    where:{ id:categoryId }}]
+                });
+            var maxprice = await db.Products.findAll({
+                order: [['price', 'DESC']], // Sort by price in descending order
+                limit: 1,
+                attributes:['price'],
+                include:[{
+                    model: db.Categories,
+                    as: 'categories',
+                    attributes:[],
+                    where:{ id:categoryId }}]
+            });
+
+            if(minprice.lenght===0 || maxprice.length===0){
+                maxprice=0;
+                minprice=0;
             }
-            attributesOfCategory[attrValue.attribute.name].push(attrValue.value);
-        });
-        console.log(attributesOfCategory);
-        return res.status(200).json({attributesOfCategory, minprice:minprice, maxprice:maxprice});
+            const attributesOfCategory={};
+            attributes.forEach(attrValue=>{
+                if(!attributesOfCategory[attrValue.attribute.name]){
+                    attributesOfCategory[attrValue.attribute.name]=[];
+                }
+                attributesOfCategory[attrValue.attribute.name].push(attrValue.value);
+            });
+            
+            await myCache.set(`attributes:${categoryId}`, JSON.stringify({attributesOfCategory, minprice:minprice, maxprice:maxprice}));
+            // redis.set(`attributes:${categoryId}`,JSON.stringify({attributesOfCategory, minprice:minprice, maxprice:maxprice}));
+            return res.status(200).json({attributesOfCategory, minprice:minprice, maxprice:maxprice});
+        }
     }catch(err){
         return res.status(500).json({message:err.message});
     }
 }
+
 
 exports.productByAttribute=async(req, res)=>{
 
@@ -1182,6 +1255,88 @@ exports.addCategory=async(req, res)=>{
             parentId:parentId,
         });
         return res.status(201).json(newCategory);
+    }catch(err){
+        return res.status(500).json({message:err.message});
+    }
+}
+
+exports.addAttributeValueToProduct=async(req, res)=>{
+    const {productId, attributeValueId}=req.body;
+
+    try{
+        const productAttribute = await db.ProductAttributes.create({
+            productId:productId, 
+            attributeValueId:attributeValueId,
+        });
+
+        const product= await db.Products.findOne({
+            where:{ id: productId },
+            attributes: { exclude: ['createdAt','updatedAt'] },
+            include:[
+                {
+                    model:db.ProductCovers,
+                    as: 'cover',
+                    attributes:['name'],
+                },
+                {
+                    model: db.Categories,
+                    required: true,
+                    as: 'categories',
+                    attributes: { exclude: ['createdAt','updatedAt'] },
+                    include: [
+                        {
+                            model: db.Categories,
+                            as: 'parent',
+                            attributes: { exclude: ['createdAt','updatedAt','id',] },
+                        }],
+                },
+                {
+                    model: db.ProductAttributes,
+                    as: 'attributeValues',
+                    attributes: { exclude: ['createdAt','updatedAt'] },
+                    
+                    include: [
+                        {
+                        model: db.CategoryAttributeValues,
+                        //   as: 'attribute', 
+                        attributes: { exclude: ['createdAt','updatedAt'] },
+                        
+                        },
+                    ],
+                },
+                
+                ],
+            
+        });
+        await myCache.set(`product:${productId}`, JSON.stringify(product));
+
+        return res.status(201).json({productAttribute, product});
+
+    }catch(err){
+        return res.status(500).json({message:err.message});
+    }
+}
+
+exports.caching=async(req, res)=>{
+    try{
+        const obj={'1':'a', '2':'b'};
+        const cat= await db.Categories.findAll({attributes:['id', 'name']});
+        const cached = await redis.get("cache");
+
+        
+        if (typeof obj == typeof cat){
+            console.log('yes');
+        }
+        
+        if(cached){
+            console.log('from cache');
+            return res.json(JSON.parse(cached));
+        }
+        else{
+            await redis.set('cache',JSON.stringify(cat));
+            console.log('from obj')
+            return res.json(cat);
+        }
     }catch(err){
         return res.status(500).json({message:err.message});
     }

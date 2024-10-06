@@ -143,6 +143,20 @@ const swaggerSpec = require('../swaggerConfig');
  *           example: ASC
  *         description: The direction in which to sort the products (ascending or descending).
  *       - in: query
+ *         name: attributeId
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: integer
+ *         description: The ID of the attribute to filter products.
+ *       - in: query
+ *         name: arrayvalues
+ *         schema:
+ *           type: array
+ *           items:
+ *             type: string
+ *         description: The values of the attribute to filter products.
+ *       - in: query
  *         name: minPrice
  *         schema:
  *           type: integer
@@ -1041,7 +1055,7 @@ const swaggerSpec = require('../swaggerConfig');
  *     summary: Add a new attribute value to a category
  *     description: Creates a new attribute value associated with a specific attribute and category.
  *     tags: 
- *       - Attribute Values
+ *       - Attributes
  *     requestBody:
  *       required: true
  *       content:
@@ -1173,6 +1187,133 @@ const swaggerSpec = require('../swaggerConfig');
  *                   example: "Internal server error"
  */
 
+/**
+ * @swagger
+ * /addattributevaluetoproduct:
+ *   post:
+ *     summary: Add an attribute value to a product
+ *     description: Adds an attribute value to a specific product by providing the `productId` and `attributeValueId`, and then returns the updated product information.
+ *     tags: 
+ *       - Attributes
+*     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               productId:
+ *                 type: integer
+ *                 description: The ID of the product
+ *                 example: 1
+ *               attributeValueId:
+ *                 type: integer
+ *                 description: The ID of the attribute value to add to the product
+ *                 example: 10
+ *     responses:
+ *       200:
+ *         description: Successfully added the attribute value and returned the updated product
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   description: The product ID
+ *                   example: 1
+ *                 name:
+ *                   type: string
+ *                   description: The product name
+ *                   example: "Sample Product"
+ *                 categories:
+ *                   type: object
+ *                   description: The category information of the product
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       description: The name of the category
+ *                       example: "Electronics"
+ *                     parent:
+ *                       type: object
+ *                       description: The parent category
+ *                       properties:
+ *                         name:
+ *                           type: string
+ *                           description: The name of the parent category
+ *                           example: "Devices"
+ *                 attributeValues:
+ *                   type: array
+ *                   description: List of attribute values of the product
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         description: The attribute value ID
+ *                         example: 10
+ *                       value:
+ *                         type: string
+ *                         description: The attribute value
+ *                         example: "Blue"
+ *       400:
+ *         description: Bad request, invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message
+ *                   example: "Invalid input data"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message
+ *                   example: "An error occurred while adding the attribute value"
+ */
+
+
+/**
+* @swagger
+* /cache:
+*   get:
+*     summary: Retrieve categories, either from cache or the database
+*     description: This endpoint attempts to retrieve categories from a cache. If no cached data is found, it fetches the categories from the database and then caches the result for future requests.
+*     responses:
+*       200:
+*         description: Successfully retrieved categories from cache or database
+*         content:
+*           application/json:
+*             schema:
+*               type: array
+*               items:
+*                 type: object
+*                 properties:
+*                   id:
+*                     type: integer
+*                     description: The category ID
+*                   name:
+*                     type: string
+*                     description: The category name
+*       500:
+*         description: Internal server error
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 message:
+*                   type: string
+*                   description: Error message
+*/
 /////////////////////////////////
 
 productRouter.get("/products", productController.products);
@@ -1196,10 +1337,17 @@ productRouter.post('/newAttribute', productController.addNewAttribute);
 productRouter.patch('/updateattribute', productController.updateAttribute);
 productRouter.post('/addAttributevalue', productController.addAttributeValue);
 productRouter.post('/addnewcategory', productController.addCategory);
+productRouter.post('/addattributevaluetoproduct', productController.addAttributeValueToProduct);
+
+
+productRouter.get('/cache', productController.caching);
+
 
 ////////////////
 productRouter.use('api/v3/api-docs', swaggerUi.serve);
 productRouter.get('api/v3/api-docs', swaggerUi.setup(swaggerSpec));
+
+
 
 
 module.exports=productRouter;
