@@ -1314,6 +1314,77 @@ const swaggerSpec = require('../swaggerConfig');
 *                   type: string
 *                   description: Error message
 */
+
+/**
+ * @swagger
+ * /updatecategory:
+ *   patch:
+ *     summary: Update a category by ID
+ *     description: Updates the name and parent category of an existing category by `categoryId`. If the category is cached, it retrieves the cached category, otherwise, it fetches it from the database.
+ *     tags: 
+ *       - Categories
+*     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The new name of the category
+ *               parentId:
+ *                 type: integer
+ *                 description: The ID of the new parent category
+ *               categoryId:
+ *                 type: integer
+ *                 required : true
+ *                 description: The ID of the category to be updated
+ *     responses:
+ *       200:
+ *         description: Successfully updated the category
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   description: The ID of the updated category
+ *                   example: 1
+ *                 name:
+ *                   type: string
+ *                   description: The updated name of the category
+ *                   example: "Updated Category Name"
+ *                 parentId:
+ *                   type: integer
+ *                   description: The updated parent category ID
+ *                   example: 2
+ *       400:
+ *         description: Bad request, invalid or missing input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message
+ *                   example: "Category not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message
+ *                   example: "An error occurred while updating the category"
+ */
+
+
 /////////////////////////////////
 
 productRouter.get("/products", productController.products);
@@ -1338,6 +1409,7 @@ productRouter.patch('/updateattribute', productController.updateAttribute);
 productRouter.post('/addAttributevalue', productController.addAttributeValue);
 productRouter.post('/addnewcategory', productController.addCategory);
 productRouter.post('/addattributevaluetoproduct', productController.addAttributeValueToProduct);
+productRouter.patch('/updatecategory', productController.updateCategory);
 
 
 productRouter.get('/cache', productController.caching);

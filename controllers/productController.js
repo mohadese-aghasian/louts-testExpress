@@ -11,9 +11,9 @@ const { measureMemory } = require('vm');
 const { name } = require('ejs');
 const NodeCache = require("node-cache");
 const { el } = require('@faker-js/faker');
-const Redis = require('ioredis');
 const { Json } = require('sequelize/lib/utils');
 const { stringify } = require('querystring');
+const Redis = require('ioredis');
 
 //////////////// CACHE //////
 // const myCache = new NodeCache();
@@ -59,13 +59,21 @@ exports.menuByPass=async(req, res)=>{
 }
 exports.menu=async(req, res)=>{
     try{
-        const categories = await db.Categories.findAll({
-            include: [{
-              model: db.Categories,
-              as: 'children',
-            }]
-          });
+        // cache key = categories
+        const cachedCategories=await redis.get('categories');
+        let categories;
         
+        //check for cache
+        if(cachedCategories){
+            categories=JSON.parse(cachedCategories);
+        }else{
+            categories = await db.Categories.findAll({
+                include: [{
+                model: db.Categories,
+                as: 'children',
+                }]
+            });
+        }
           const categoryMap = {};
           const rootCategories = {};
         
@@ -105,19 +113,34 @@ exports.menu=async(req, res)=>{
 exports.products=async(req, res)=>{
     
     const {limit, start, orderby, orderdir ,searchtext, categoryId, arrayvalues, attributeId,  minPrice, maxPrice} = req.query;
+    console.log("Received input:");
+    console.log("searchtext:", searchtext);
+    console.log("categoryId:", categoryId);
+    console.log("attributeId:", attributeId);
+    console.log("arrayvalues:", arrayvalues);
+    console.log(attributeId,arrayvalues);
+
+    let attributeIds, valuesArray;
+    if(attributeId){
+        attributeIds = Array.isArray(attributeId)&&attributeId ? attributeId : [attributeId];
+    }
+    if(arrayvalues){
+        valuesArray = Array.isArray(arrayvalues)&&arrayvalues ? arrayvalues : [arrayvalues];
+    }
     const limitClause = limit ? parseInt(limit, 10) : undefined;
     const offsetClause = start ? parseInt(start, 10) : undefined;
-    const valuesArray = Array.isArray(arrayvalues)&&arrayvalues ? arrayvalues : [arrayvalues];
+    // const valuesArray = Array.isArray(arrayvalues)&&arrayvalues ? arrayvalues : [arrayvalues];
     const categoryIds = Array.isArray(categoryId) ? categoryId : [categoryId];
-    const attributeIds = Array.isArray(attributeId)&&attributeId ? attributeId : [attributeId];
-
+    // const attributeIds = Array.isArray(attributeId)&&attributeId ? attributeId : [attributeId];
+    
+    
     
     // Default to ordering by 'id' if no column is specified 
     const orderColumn = orderby || 'id'; 
     // Default to 'ASC' if no direction is specified
     const orderDirection = orderdir === 'DESC' ? 'DESC' : 'ASC'; 
 
-
+    
     
     const schema = Joi.object({
         searchtext: Joi.string().max(100).default(" ").messages({
@@ -151,14 +174,13 @@ exports.products=async(req, res)=>{
             'array.includes': 'attributeId must contain only integers.',
             'array.required': 'attributeId is required.',
         }),
-        attributeId: Joi.array()
+        attributeId: Joi.array().default(null)
         .items(Joi.number().integer())
         .messages({
             'array.base': 'categoryId must be an array.',
             'array.includes': 'categoryId must contain only integers.',
-            'array.required': 'categoryId is required.',
         }),
-        arrayvalues:Joi.array()
+        arrayvalues:Joi.array().default(null)
         .items(Joi.string())
         .messages({
             'array.base': 'arrayvalues must be an array.',
@@ -181,9 +203,10 @@ exports.products=async(req, res)=>{
     if(error){
         return res.status(400).json({message:error.details[0].message});
     }
-
+    
     let priceWhereClause;
     if (minPrice !== undefined && maxPrice !== undefined) {
+        // if we have both
         priceWhereClause = {
             [Op.and]: [
                 { price:{ [Op.gte]: parseFloat(minPrice)} },
@@ -191,6 +214,7 @@ exports.products=async(req, res)=>{
             ]
         };
     }else if(minPrice || maxPrice){
+        // if only one of them
        priceWhereClause = {
         ...(minPrice !== undefined && { price: { [Op.gte]: parseFloat(minPrice) } }), 
         ...(maxPrice !== undefined && { price: { [Op.lte]: parseFloat(maxPrice) } }),
@@ -198,12 +222,16 @@ exports.products=async(req, res)=>{
     }else{
         priceWhereClause={};
     }
-    const searchquery=value.searchtext.split(' ').join("|");
-
     
-    const attributeValuesWhereClause={};
+    const searchquery=value.searchtext.split(' ').join("|");
+    // attributeIds=value.attributeId;
+    // valuesArray=value.arrayvalues;
+    let attributeValuesWhereClause={};
+    console.log("before try",attributeIds,valuesArray);
 
     try{
+        
+        console.log(attributeIds, valuesArray);
         if(attributeIds && valuesArray)
         {
             const attributevalues= await db.CategoryAttributeValues.findAll({
@@ -215,8 +243,9 @@ exports.products=async(req, res)=>{
                     ]
                 }
             });
-    
-            const attributevalueIds=[];
+
+            console.log(JSON.stringify(attributevalues));
+            let attributevalueIds=[];
             attributevalues.forEach(attrvalue=>{
                 attributevalueIds.push(attrvalue.id);
             });
@@ -227,6 +256,7 @@ exports.products=async(req, res)=>{
                 }
             }
         }
+        console.log(JSON.stringify(attributeValuesWhereClause));
         const categoryExists = await db.Categories.findAll({
             where: {
                 id:categoryIds,
@@ -235,7 +265,7 @@ exports.products=async(req, res)=>{
         if(!categoryExists){
             return res.status(404).json({message:'category was not found'});
         }
-        
+
         var products=await db.Products.findAll({
             limit:limitClause,
             offset:offsetClause,
@@ -254,8 +284,8 @@ exports.products=async(req, res)=>{
                             }}
                         ],
                     },
-                    priceWhereClause
-            ]
+                    priceWhereClause,
+                ]
             },
             include:[
                 {
@@ -268,7 +298,9 @@ exports.products=async(req, res)=>{
                     required: true,
                     as: 'categories',
                     attributes: { exclude: ['createdAt','updatedAt'] },
-                    where: category ? { id : categoryExists.id } : {},
+                    where: {
+                        id:{[Op.in]:categoryIds}
+                    },
                     include: [
                         {
                             model: db.Categories,
@@ -281,6 +313,7 @@ exports.products=async(req, res)=>{
                     as: 'attributeValues',
                     attributes: { exclude: ['createdAt','updatedAt'] },
                     where:attributeValuesWhereClause,
+                    // where:{},
                     include: [
                         {
                         model: db.CategoryAttributeValues,
@@ -294,6 +327,7 @@ exports.products=async(req, res)=>{
             ],
         
         });
+        
         if(products.length === 0){
             products = await db.Products.findAll({
                 
@@ -327,7 +361,7 @@ exports.products=async(req, res)=>{
                         required: true,
                         as: 'categories',
                         attributes: { exclude: ['createdAt','updatedAt'] },
-                        where: category ? { id : categoryExists.id } : {},
+                        where: {[Op.in]:categoryIds},
                         include: [
                             {
                                 model: db.Categories,
@@ -657,7 +691,8 @@ exports.addProduct=async(req, res)=>{
     }
 
     try {
-        const cachedCategories=await myCache.get(`category:${categoryId}`);
+        // cache key = category:[categoryId]
+        const cachedCategories=await redis.get(`category:${categoryId}`);
         let isCategoryExist;
 
         if(cachedCategories){
@@ -665,7 +700,7 @@ exports.addProduct=async(req, res)=>{
             isCategoryExist=cachedCategories;
         }else{
             isCategoryExist= await db.Categories.findByPk(categoryId);
-            await myCache.set(`category:${categoryId}`, JSON.stringify(isCategoryExist));
+            await redis.set(`category:${categoryId}`, JSON.stringify(isCategoryExist));
         }
 
         if (!isCategoryExist){
@@ -680,15 +715,15 @@ exports.addProduct=async(req, res)=>{
         });
 
          // cache key = product:[id]
-        // await myCache.set(`product:${newproduct.id}`, newproduct);
+        await redis.set(`product:${newproduct.id}`, JSON.stringify(newproduct));
 
         const productcategory= await db.ProductCategories.create({
             productId:newproduct.id,
             categoryId:categoryId
         });
-        // cache key = productCategory:[productId:categoryId]
-        // Cache
-        // await myCache.set(`productCategory:${newproduct.id+":"+categoryId}`);
+        // cache key = productCategory:[productId]:[categoryId]
+        // Caching
+        await redis.set(`productCategory:${newproduct.id}:${categoryId}`, JSON.stringify(productcategory));
 
         res.status(201).json({ message: 'File uploaded and processed successfully', newproduct , productcategory});
     } catch (error) {
@@ -740,9 +775,6 @@ exports.addProduct2=async(req, res)=>{
 exports.addFavourite=async(req, res)=>{
     const {productId} = req.params;
     const userId = req.user.userId;
-    if(!productId){
-        return res.json({message:"product ID is required!"});
-    }
 
     const schema = Joi.object({
         id: Joi.string().pattern(/^\d+$/).required(), // only integer
@@ -753,17 +785,30 @@ exports.addFavourite=async(req, res)=>{
     }
     
     try{
-
-        const favourite = await db.FavouriteProducts.findOne({
-            where:{
-                productId:productId
-            }
-        });
+        // cache key = favourite:[userId]:[productId]
+        const cachedFavourite=await redis.get(`favourite:${userId}:${productId}`);
+        
+        let favourite;
+        if(cachedFavourite){
+            favourite=JSON.parse(cachedFavourite);
+        }else{
+            favourite = await db.FavouriteProducts.findOne({
+                where:{
+                    userId:userId,
+                    productId:productId,
+                }
+            });
+        }
         if(favourite){
             await favourite.destroy();
+            await redis.del(`favourite:${userId}:${productId}`);
             return res.status(202).json({message:"removed from favourite."});
         }else{
-            const product=await db.Products.findOne({where:{id:productId}});
+            // cache key = product:[productId]
+            let product = await redis.get(`product:${productId}`);
+            if(!product){
+              product=await db.Products.findOne({where:{id:productId}});  
+            }
             if(!product){
                 return res.status(404).json({message:"no product was found for this ID"});
             }
@@ -771,7 +816,8 @@ exports.addFavourite=async(req, res)=>{
                 productId:productId,
                 userId:userId
             });
-            res.status(201).json({message:"added to favourite!",result:addfavourite});
+            await redis.set(`favourite:${userId}:${productId}`, addfavourite);
+            res.status(201).json({message:"added to favourite!", addfavourite});
         }
     }catch(err){
         console.log(err.message);
@@ -792,17 +838,16 @@ exports.oneProduct=async(req, res)=>{
     }
 
     try{
-        const iscached = await myCache.get(`product:${productId}`);
+        const iscached = await redis.get(`product:${productId}`);
         
-    
+        let product;
         if(iscached){
-            // const product = redis.get(`peoduct:${productId}`);
-            // const product = JSON.parse(iscached);
             console.log('restored from cache');
             return res.status(200).json(JSON.parse(iscached));
+            product =iscached;
         }else{
 
-            const product= await db.Products.findOne({
+            product= await db.Products.findOne({
                 where:{id: parseInt(productId, 10)},
                 attributes: { exclude: ['createdAt','updatedAt'] },
                 include:[
@@ -845,11 +890,11 @@ exports.oneProduct=async(req, res)=>{
                 return res.json({message:"no product was found for this ID"})
             }
             
-            await myCache.set(`product:${productId}`, JSON.stringify(product));
+            await redis.set(`product:${productId}`, JSON.stringify(product));
 
-            return res.status(200).json(product);
+            
         }
-
+        return res.status(200).json(product);
         
     }catch(err){
         res.status(500).json({message:err.message});
@@ -859,11 +904,11 @@ exports.oneProduct=async(req, res)=>{
 exports.getFavourites=async(req, res)=>{
     
     try{
-        // Cache key : favourite:[userId]
-        const cached = await myCache.get(`favourite:${req.user.userId}`);
+        // Cache key : favourites:[userId]
+        const cached = await redis.get(`favourites:${req.user.userId}`);
         if(cached){
             console.log('restore from cache');
-            return res.status(200).json(cached);
+            return res.status(200).json(JSON.parse(cached));
         }else{
             const favourites =await db.FavouriteProducts.findAll({
                 where:{
@@ -875,16 +920,14 @@ exports.getFavourites=async(req, res)=>{
                 }]
             });
             
-            const plainFavourite=favourites.get({ plain: true });
-            await myCache.set(`favourite:${req.user.userId}`, plainFavourite);
+            await redis.set(`favourites:${req.user.userId}`, JSON.string(favourites));
             return res.status(200).json(favourites);
             
         }
     }catch(err){
-
+        return res.status(500).json({message:err.message});
     }
 }
-
 exports.searchProducts=async(req, res)=>{
     const {title, description} =req.query;
 
@@ -925,7 +968,6 @@ exports.searchProducts=async(req, res)=>{
         return res.status(500).json({message:err.message});
     }
 }
-
 exports.getAttributesByCategory=async(req, res)=>{
     
     // cache key = attributes:[categoryId]
@@ -947,25 +989,27 @@ exports.getAttributesByCategory=async(req, res)=>{
 
     try{
         // cache key = category:[categoryId]
-        const cachedCategories=await myCache.get(`category:${categoryId}`);
+        const cachedCategories=await redis.get(`category:${categoryId}`);
         let isCategoryExist;
-
+        
+        // check for cache
         if(cachedCategories){
             console.log('restore category from cache***');
             isCategoryExist=cachedCategories;
         }else{
             isCategoryExist= await db.Categories.findByPk(categoryId);
-            await myCache.set(`category:${categoryId}`, JSON.stringify(isCategoryExist));
+            await redis.set(`category:${categoryId}`, JSON.stringify(isCategoryExist));
         }
 
+        //check for existence in db
         if (!isCategoryExist){
             return res.status(400).json({message:'category not found'});
         }
 
-        const cached= await myCache.get(`attributes:${categoryId}`);
-        if(cached){
+        const cachedAttributes= await redis.get(`attributes:${categoryId}`);
+        if(cachedAttributes){
             console.log('restore from cache');
-            return res.status(200).json(JSON.parse(cached));
+            return res.status(200).json(JSON.parse(cachedAttributes));
         }else{
 
             const attributes= await db.CategoryAttributeValues.findAll({
@@ -1018,7 +1062,7 @@ exports.getAttributesByCategory=async(req, res)=>{
                 attributesOfCategory[attrValue.attribute.name].push(attrValue.value);
             });
             
-            await myCache.set(`attributes:${categoryId}`, JSON.stringify({attributesOfCategory, minprice:minprice, maxprice:maxprice}));
+            await redis.set(`attributes:${categoryId}`, JSON.stringify({attributesOfCategory, minprice:minprice, maxprice:maxprice}));
             // redis.set(`attributes:${categoryId}`,JSON.stringify({attributesOfCategory, minprice:minprice, maxprice:maxprice}));
             return res.status(200).json({attributesOfCategory, minprice:minprice, maxprice:maxprice});
         }
@@ -1026,7 +1070,6 @@ exports.getAttributesByCategory=async(req, res)=>{
         return res.status(500).json({message:err.message});
     }
 }
-
 
 exports.productByAttribute=async(req, res)=>{
 
@@ -1254,6 +1297,67 @@ exports.addCategory=async(req, res)=>{
             name:value.name, 
             parentId:parentId,
         });
+        // cache key = category[categoryId]
+        await redis.set(`category:${newCategory.id}`, JSON.stringify(newCategory));
+
+        const categories = await db.Categories.findAll({
+            include: [{
+            model: db.Categories,
+            as: 'children',
+            }]
+        });
+        await redis.set('categories', JSON.stringify(categories));
+
+
+        return res.status(201).json(newCategory);
+    }catch(err){
+        return res.status(500).json({message:err.message});
+    }
+}
+exports.updateCategory=async(req, res)=>{
+    const {name, parentId, categoryId}=req.body;
+
+    try{ 
+        // cache key = category[categoryId]
+        const cachedOldCategory= await redis.get(`category:${categoryId}`);
+        let theOldCategory
+        if(!cachedOldCategory){
+            theOldCategory = await db.Categories.findByPk(categoryId);
+            if(!theOldCategory){
+                return res.status.json({message:'category was not found'});
+            }
+        }else{
+            console.log(cachedOldCategory);
+            theOldCategory=JSON.parse(cachedOldCategory);
+        }
+
+        let newName=theOldCategory.name;
+        let newParentId=theOldCategory.parentId;
+        if(name){
+            newName=name;
+        }
+        if(parentId){
+            newParentId=parentId;
+        }
+
+        console.log(name, parentId);
+        await db.Categories.update(
+            {
+                name:newName,
+                parentId:parentId,
+            },{
+                where:{
+                    id:categoryId,
+                }
+            }
+        );
+        
+        const newCategory =await db.Categories.findByPk(categoryId);
+        await redis.set(`category:${categoryId}`, JSON.stringify(newCategory));
+        
+        const categories=await db.Categories.findAll();
+        await redis.set('categories', JSON.stringify(categories));
+
         return res.status(201).json(newCategory);
     }catch(err){
         return res.status(500).json({message:err.message});
@@ -1308,7 +1412,7 @@ exports.addAttributeValueToProduct=async(req, res)=>{
                 ],
             
         });
-        await myCache.set(`product:${productId}`, JSON.stringify(product));
+        await redis.set(`product:${productId}`, JSON.stringify(product));
 
         return res.status(201).json({productAttribute, product});
 
@@ -1320,21 +1424,19 @@ exports.addAttributeValueToProduct=async(req, res)=>{
 exports.caching=async(req, res)=>{
     try{
         const obj={'1':'a', '2':'b'};
-        const cat= await db.Categories.findAll({attributes:['id', 'name']});
-        const cached = await redis.get("cache");
+        // await redis.del('cache');
+        const cached = await redis.get('cache');
 
-        
-        if (typeof obj == typeof cat){
-            console.log('yes');
-        }
         
         if(cached){
             console.log('from cache');
             return res.json(JSON.parse(cached));
         }
         else{
+            const cat= await db.Categories.findAll({attributes:['id', 'name']});
             await redis.set('cache',JSON.stringify(cat));
-            console.log('from obj')
+           
+            console.log('from obj');
             return res.json(cat);
         }
     }catch(err){
