@@ -2,19 +2,14 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const authenticateJWT = require('../middleware/authMiddleware');
 const db = require("../models/index");
-const {  where, Op, Sequelize } = require('sequelize');
+const {  where, Op, } = require('sequelize');
 const Joi = require("joi");
 const path = require('path');
 const sharp = require('sharp');
-const { Interface } = require('readline');
-const { measureMemory } = require('vm');
 const { name } = require('ejs');
 const NodeCache = require("node-cache");
-const { el } = require('@faker-js/faker');
-const { Json } = require('sequelize/lib/utils');
-const { stringify } = require('querystring');
 const Redis = require('ioredis');
-const cron = require('node-cron');
+
 
 //////////////// CACHE //////
 // const myCache = new NodeCache();
@@ -1410,7 +1405,6 @@ exports.updateCategory=async(req, res)=>{
             {
                 name:newName,
                 parentId:newParentId,
-                views:req.body.views,
             },{
                 where:{
                     id:categoryId,
@@ -1429,7 +1423,6 @@ exports.updateCategory=async(req, res)=>{
         return res.status(500).json({message:err.message});
     }
 }
-
 exports.addAttributeValueToProduct=async(req, res)=>{
     const {productId, attributeValueId}=req.body;
 
@@ -1491,43 +1484,6 @@ async function trackCategoryViews(categoryId){
     try{
         await redis.incr(`views:category:${categoryId}`);
         return true;       
-    }catch(err){
-        console.log(`message:${err.message}`);
-        return false;
-    }
-}
-
-async function updateCategoryViewsInDb(){
-    try{
-        const keys = await redis.scan(0, 'MATCH', 'views:category:*');
-        if(keys.lenght === 0 ){
-            console.log('nothig to update');
-            return true;
-        }
-
-        for(const key of keys){
-            const view = await redis.get(key);
-            const categoryId = parseInt(key.split(':')[2],10); 
-
-            if(!view){
-                console.log(`no data category ${categoryId}`);
-                continue;
-            }
-
-            await db.Categories.Increment(
-                {
-                    views:parseInt(views, 10),
-                },
-                {
-                    where:{
-                        id:categoryId
-                    }
-                });
-            await redis.del(key);   
-        }
-        console.log("fetch all views to category.");
-        return true;
-
     }catch(err){
         console.log(`message:${err.message}`);
         return false;

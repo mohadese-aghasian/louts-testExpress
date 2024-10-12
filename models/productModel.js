@@ -90,7 +90,7 @@ module.exports = (sequelize, DataTypes) => {
       
       Product.hasMany(models.ProductAttributes, { foreignKey: 'productId', as: 'attributeValues' });
 
-
+      Product.hasMany(models.ProductVersions, { foreignKey: 'productId', as:'versions'});
       //   Product.belongsToMany(models.Attributes, {
       //     through: models.ProductAttributeValues,
       //     foreignKey: 'productId',
