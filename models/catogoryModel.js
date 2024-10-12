@@ -69,6 +69,10 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id',
       },
     },
+    views:{
+      type:DataTypes.INTEGER, 
+      defaultValue:0,
+    }
   });
 
   Category.associate = (models) => {

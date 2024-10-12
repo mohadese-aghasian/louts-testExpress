@@ -14,6 +14,7 @@ const { el } = require('@faker-js/faker');
 const { Json } = require('sequelize/lib/utils');
 const { stringify } = require('querystring');
 const Redis = require('ioredis');
+const cron = require('node-cron');
 
 //////////////// CACHE //////
 // const myCache = new NodeCache();
@@ -113,12 +114,6 @@ exports.menu=async(req, res)=>{
 exports.products=async(req, res)=>{
     
     const {limit, start, orderby, orderdir ,searchtext, categoryId, arrayvalues, attributeId,  minPrice, maxPrice} = req.query;
-    console.log("Received input:");
-    console.log("searchtext:", searchtext);
-    console.log("categoryId:", categoryId);
-    console.log("attributeId:", attributeId);
-    console.log("arrayvalues:", arrayvalues);
-    console.log(attributeId,arrayvalues);
 
     let attributeIds, valuesArray;
     if(attributeId){
@@ -140,7 +135,6 @@ exports.products=async(req, res)=>{
     // Default to 'ASC' if no direction is specified
     const orderDirection = orderdir === 'DESC' ? 'DESC' : 'ASC'; 
 
-    
     
     const schema = Joi.object({
         searchtext: Joi.string().max(100).default(" ").messages({
@@ -227,11 +221,13 @@ exports.products=async(req, res)=>{
     // attributeIds=value.attributeId;
     // valuesArray=value.arrayvalues;
     let attributeValuesWhereClause={};
-    console.log("before try",attributeIds,valuesArray);
+
 
     try{
+        for(var category of categoryIds){
+            await trackCategoryViews(category);
+        }
         
-        console.log(attributeIds, valuesArray);
         if(attributeIds && valuesArray)
         {
             const attributevalues= await db.CategoryAttributeValues.findAll({
@@ -328,11 +324,13 @@ exports.products=async(req, res)=>{
         
         });
         
+
+
         if(products.length === 0){
             products = await db.Products.findAll({
-                
                 limit:limitClause,
                 offset:offsetClause,
+                attributes: { exclude: ['createdAt','updatedAt'] },
                 order: [[orderColumn, orderDirection]],
                 where:{
                     [Op.and]:[
@@ -348,7 +346,7 @@ exports.products=async(req, res)=>{
                             ]
                         },
                         priceWhereClause
-                ]
+                    ]
                 },
                 include:[
                     {
@@ -361,7 +359,9 @@ exports.products=async(req, res)=>{
                         required: true,
                         as: 'categories',
                         attributes: { exclude: ['createdAt','updatedAt'] },
-                        where: {[Op.in]:categoryIds},
+                        where: {
+                            id:{[Op.in]:categoryIds}
+                        },
                         include: [
                             {
                                 model: db.Categories,
@@ -387,7 +387,7 @@ exports.products=async(req, res)=>{
                     ],
             }); 
         }
-        return res.json(products);
+        return res.status(200).json(products);
     }catch(err){
         return res.status(500).json({message:err.message});
     }
@@ -812,11 +812,12 @@ exports.addFavourite=async(req, res)=>{
             if(!product){
                 return res.status(404).json({message:"no product was found for this ID"});
             }
+
             const addfavourite =await db.FavouriteProducts.create({
                 productId:productId,
                 userId:userId
             });
-            await redis.set(`favourite:${userId}:${productId}`, addfavourite);
+            await redis.set(`favourite:${userId}:${productId}`, JSON.stringify(addfavourite));
             res.status(201).json({message:"added to favourite!", addfavourite});
         }
     }catch(err){
@@ -920,7 +921,7 @@ exports.getFavourites=async(req, res)=>{
                 }]
             });
             
-            await redis.set(`favourites:${req.user.userId}`, JSON.string(favourites));
+            await redis.set(`favourites:${req.user.userId}`, JSON.stringify(favourites));
             return res.status(200).json(favourites);
             
         }
@@ -1208,6 +1209,21 @@ exports.productByAttribute=async(req, res)=>{
 exports.addNewAttribute=async(req ,res)=>{
 
     const { attributeName }=req.body;
+
+    const schema = Joi.object({
+        attributeName: Joi.string().required().messages({
+            'string.empty': 'name is required',
+            'any.required': 'name is required'
+        }),
+    });
+    const { error, value } = schema.validate({
+        attributeName:attributeName,
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
+
+
     try{
         const newAttribute=await db.Attributes.create({
             name:attributeName
@@ -1221,6 +1237,26 @@ exports.addNewAttribute=async(req ,res)=>{
 exports.updateAttribute=async(req, res)=>{
 
     const {attributeId, newName}=req.body;
+
+    const schema = Joi.object({
+        attributeId: Joi.number().integer().required().messages({
+            'number.base': 'attributeId must be a number.',
+            'number.integer': 'attributeId must be an integer.',
+            'number.required': 'attributeId is required.',
+        }),
+        newName: Joi.string().required().messages({
+            'string.empty': 'Name is required',
+            'any.required': 'Name is required'
+        }),
+    });
+    const { error, value } = schema.validate({
+        attributeId:attributeId,
+        newName:newName,
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
+
     try{
         const modifiedAttribute=await db.Attributes.update(
             {name:newName},
@@ -1267,6 +1303,9 @@ exports.addAttributeValue=async(req, res)=>{
             categoryId:categoryId, 
             value:thevalue 
         });
+
+        // cache key = attributevalue:[id]
+        await redis.set(`attribute:${newAttributeValue.id}`, JSON.stringify(newAttributeValue));
         return res.status(201).json(newAttributeValue);
     }catch(err){
         return res.status(500).json({message:err.message});
@@ -1306,6 +1345,8 @@ exports.addCategory=async(req, res)=>{
             as: 'children',
             }]
         });
+
+        // cache key = categories
         await redis.set('categories', JSON.stringify(categories));
 
 
@@ -1315,11 +1356,35 @@ exports.addCategory=async(req, res)=>{
     }
 }
 exports.updateCategory=async(req, res)=>{
-    const {name, parentId, categoryId}=req.body;
+    const {name, parentId, categoryId,}=req.body;
+
+    const schema = Joi.object({
+        categoryId: Joi.number().integer().required().messages({
+            'number.base': 'categoryId must be a number.',
+            'number.integer': 'categoryId must be an integer.',
+            'number.required':'categoryId is required.',
+        }),
+        parentId: Joi.number().integer().messages({
+            'number.base': 'parentId must be a number.',
+            'number.integer': 'parentId must be an integer.',
+        }),
+        name: Joi.string().messages({
+            'string.empty': 'name is required',
+        }),
+    });
+    const { error, value } = schema.validate({
+        parentId:parentId,
+        name:name,
+        categoryId:categoryId
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
 
     try{ 
         // cache key = category[categoryId]
         const cachedOldCategory= await redis.get(`category:${categoryId}`);
+
         let theOldCategory
         if(!cachedOldCategory){
             theOldCategory = await db.Categories.findByPk(categoryId);
@@ -1344,7 +1409,8 @@ exports.updateCategory=async(req, res)=>{
         await db.Categories.update(
             {
                 name:newName,
-                parentId:parentId,
+                parentId:newParentId,
+                views:req.body.views,
             },{
                 where:{
                     id:categoryId,
@@ -1420,7 +1486,53 @@ exports.addAttributeValueToProduct=async(req, res)=>{
         return res.status(500).json({message:err.message});
     }
 }
+async function trackCategoryViews(categoryId){
+    // cache key = views:cateogry:[categoryId]
+    try{
+        await redis.incr(`views:category:${categoryId}`);
+        return true;       
+    }catch(err){
+        console.log(`message:${err.message}`);
+        return false;
+    }
+}
 
+async function updateCategoryViewsInDb(){
+    try{
+        const keys = await redis.scan(0, 'MATCH', 'views:category:*');
+        if(keys.lenght === 0 ){
+            console.log('nothig to update');
+            return true;
+        }
+
+        for(const key of keys){
+            const view = await redis.get(key);
+            const categoryId = parseInt(key.split(':')[2],10); 
+
+            if(!view){
+                console.log(`no data category ${categoryId}`);
+                continue;
+            }
+
+            await db.Categories.Increment(
+                {
+                    views:parseInt(views, 10),
+                },
+                {
+                    where:{
+                        id:categoryId
+                    }
+                });
+            await redis.del(key);   
+        }
+        console.log("fetch all views to category.");
+        return true;
+
+    }catch(err){
+        console.log(`message:${err.message}`);
+        return false;
+    }
+}
 exports.caching=async(req, res)=>{
     try{
         const obj={'1':'a', '2':'b'};
@@ -1443,3 +1555,4 @@ exports.caching=async(req, res)=>{
         return res.status(500).json({message:err.message});
     }
 }
+

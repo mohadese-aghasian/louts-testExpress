@@ -7,6 +7,8 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swaggerConfig');
 const cors= require("cors");
 const { compare } = require("bcryptjs");
+const UpdateCategoryViewJob = require("./jobs/cronjobs");
+
 
 /////////////////
 // require("dotenv").config(
@@ -39,7 +41,8 @@ app.use('/api/v1', userRouter);
 app.use('/api/v2', blogrouter);
 app.use('/api/v3', productRouter);
 
-
+// 5. Schedule the task to run every 20 seconds
+UpdateCategoryViewJob();
 
 // Swagger setup
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
