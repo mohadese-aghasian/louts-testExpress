@@ -7,9 +7,8 @@ const Joi = require("joi");
 const path = require('path');
 const sharp = require('sharp');
 const { name } = require('ejs');
-const NodeCache = require("node-cache");
 const Redis = require('ioredis');
-
+const { sequelize } = require('../models');
 
 //////////////// CACHE //////
 // const myCache = new NodeCache();
@@ -1512,3 +1511,141 @@ exports.caching=async(req, res)=>{
     }
 }
 
+exports.updateProduct=async(req, res)=>{
+    const {productId, title, description , price, coverId, categoryId} = req.body;
+
+    const schema = Joi.object({
+        productId: Joi.number().integer().required().messages({
+            'number.base': 'productId must be a number.',
+            'number.integer': 'productId must be an integer.',
+            'number.required':'productId is required.',
+        }),
+        title: Joi.string().messages({
+            'string.string': 'title must be string ',
+        }),
+        description: Joi.string().messages({
+            'string.string': 'description must be string ',
+        }),
+        price: Joi.number().positive().messages({
+            'number.base': 'price must be number ',
+        }),
+        coverId: Joi.number().integer().messages({
+            'number.base': 'coverId must be number ',
+            'number.integer': 'coverId must be an integer.',
+        }),
+        categoryId: Joi.number().integer().messages({
+            'number.base': 'categoryId must be a number.',
+            'number.integer': 'categoryId must be an integer.',
+        }),
+        
+    });
+    const { error, value } = schema.validate({
+        productId:productId,
+        title:title,
+        description:description, 
+        price:price, 
+        coverId:coverId,
+        categoryId:categoryId,
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
+
+    const transaction = await sequelize.transaction();
+
+    try{
+        const product=await db.Products.findByPk(productId);
+        
+
+        const newTitle = title ? title : product.title;
+        const newDescription = description ? description : product.description;
+        const newPrice = price ? price : product.price;
+        const newCoverId = coverId ? coverId : product.coverId;
+
+        if(product.currentVersion===0){
+            const oldproductCategory = await db.ProductCategories.findOne({
+                where:{
+                    productId:productId,
+                }
+            });
+            console.log(JSON.stringify(oldproductCategory));
+            const oldVersion=await db.ProductVersions.create({
+                productId:productId,
+                version:product.currentVersion,
+                changes:{
+                   'product':{ 
+                    title:product.title,
+                    description:product.description,
+                    price:product.price,
+                    coverId:product.coverId,
+                    currentVersion:product.currentVersion,}
+                },
+                'category':{
+                    'categoryId':oldproductCategory.categoryId,
+                }
+            }, { transaction });
+        }
+        
+
+        let productFields = {
+            title:newTitle,
+            description:newDescription,
+            price:newPrice,
+            coverId:newCoverId, 
+            currentVersion:product.currentVersion+1, 
+        };
+        
+        const changedProduct = await db.Products.update(
+            productFields,
+            {
+                where:{id:productId}
+            }, 
+            { transaction });
+        
+
+        let categoryFields={};
+        if(categoryId){
+            // if category is about to change
+            const productCategory= await db.ProductCategories.findOne({
+                where:{
+                    productId:productId,
+                }
+            });
+            await db.ProductCategories.destroy({
+                where:{
+                    productId:productId, 
+                    categoryId:productCategory.categoryId,
+                }
+            }, { transaction });
+
+            const newProductCategories = await db.ProductCategories.create({
+                productId:productId,
+                categoryId:categoryId,
+            }, { transaction });
+            
+            categoryFields['categoryId']=categoryId;
+
+        }else{
+            const productCategory = await db.ProductCategories.findOne({
+                where:{
+                    productId:productId,
+                }
+            });
+            categoryFields['categoryId']=productCategory.categoryId;
+        }
+
+        const newVersion = await db.ProductVersions.create({
+            productId:product.id,
+            version:product.currentVersion+1,
+            changes:{'product':productFields, "category":categoryFields}
+        },
+        { transaction });
+
+        await transaction.commit();
+        return res.status(200).json({newVersion});
+
+    }catch(err){
+        await transaction.rollback();
+        return res.status(500).json({message:err.message});
+    }
+}

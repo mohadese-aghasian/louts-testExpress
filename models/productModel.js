@@ -20,6 +20,9 @@
 //                 key:"id",
 //             },
 //         },
+
+const { Sequelize } = require(".");
+
         
 //     });
 
@@ -70,6 +73,10 @@ module.exports = (sequelize, DataTypes) => {
           key: 'id',
         },
       },
+      currentVersion:{
+        type:DataTypes.INTEGER,
+        defaultValue:0,
+      }
     });
   
     Product.associate = (models) => {

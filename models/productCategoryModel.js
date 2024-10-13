@@ -24,6 +24,14 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       type: DataTypes.DATE,
     },
+  },{
+      indexes:[
+        {
+          fields:['productId', 'categoryId'],
+          type: 'unique',
+          name:'unique_category_for_product',
+        }
+      ]
   });
 
   ProductCategory.associate = (models) => {

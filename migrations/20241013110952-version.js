@@ -8,7 +8,7 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       productId:{
         allowNull:false, 
@@ -32,12 +32,36 @@ module.exports = {
       },
       updatedAt: {
         allowNull: false,
-        type: Sequelize.DATE,
+        type:Sequelize.DATE,
       }
-    })
+    },{
+      
+      indexes: [
+          {
+              unique: true,
+              fields: ['productId', 'version']
+          }
+      ]
+  });
+
+  queryInterface.addColumn("Products", 'currentVersion',{
+    type:Sequelize.INTEGER,
+    defaultValue:0,
+  });
+
+  queryInterface.addConstraint("ProductCategories",{
+    fields:['productId', 'categoryId'],
+    type: 'unique',
+    name:'unique_category_for_product'
+  });
+
+
+
   },
 
   async down (queryInterface, Sequelize) {
-    queryInterface.dropTable('ProductVersions');
+    queryInterface.removeConstraint("ProductCategories",'unique_category_for_product');
+    queryInterface.removeColumn("Products", 'currentVersion');
+    queryInterface.dropTable('productVersions');
   }
 };

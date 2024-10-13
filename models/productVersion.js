@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
     const ProductVersion = sequelize.define('ProductVersions', {
-        id: {
+          id: {
             allowNull: false,
             autoIncrement: true,
             primaryKey: true,
@@ -29,8 +29,16 @@ module.exports = (sequelize, DataTypes) => {
           updatedAt: {
             allowNull: false,
             type:DataTypes.DATE,
+          },
+    },{
+      
+      indexes: [
+          {
+              unique: true,
+              fields: ['productId', 'version']
           }
-    });
+      ]
+  });
   
     ProductVersion.associate = (models) => {
   

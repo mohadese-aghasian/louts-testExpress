@@ -2,8 +2,7 @@ const { where, Model } = require("sequelize");
 const db=require("./models/index");
 const { Op } = require('sequelize');
 const { faker, el } = require('@faker-js/faker');
-const { json } = require("body-parser");
-const { Json } = require("sequelize/lib/utils");
+
 
 // const results = {
 //     fullText: fullTextResults.map(product => product.id),
@@ -42,7 +41,6 @@ const { Json } = require("sequelize/lib/utils");
 //         }
 
      
-        
     
  
 // }

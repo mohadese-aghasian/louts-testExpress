@@ -1384,6 +1384,94 @@ const swaggerSpec = require('../swaggerConfig');
  *                   example: "An error occurred while updating the category"
  */
 
+/**
+ * @swagger
+ * /products/update:
+ *   patch:
+ *     summary: Update a product's details, including title, description, price, cover, and category.
+ *     description: Updates a product's information. If the product exists, it updates the relevant fields and increments the product's version.
+ *     tags:
+ *       - Products
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - productId
+ *             properties:
+ *               productId:
+ *                 type: integer
+ *                 description: ID of the product to update.
+ *                 example: 1
+ *               title:
+ *                 type: string
+ *                 description: New title of the product.
+ *                 example: "Updated Product Title"
+ *               description:
+ *                 type: string
+ *                 description: New description of the product.
+ *                 example: "Updated product description."
+ *               price:
+ *                 type: number
+ *                 description: New price of the product. Must be positive.
+ *                 example: 200.00
+ *               coverId:
+ *                 type: integer
+ *                 description: ID of the new product cover.
+ *                 example: 2
+ *               categoryId:
+ *                 type: integer
+ *                 description: ID of the new category to assign the product to.
+ *                 example: 3
+ *     responses:
+ *       200:
+ *         description: Successfully updated the product.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Product updated successfully"
+ *       400:
+ *         description: Invalid request parameters (validation error).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "productId must be an integer."
+ *       404:
+ *         description: Product not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Product not found"
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+
+
 
 /////////////////////////////////
 
@@ -1397,6 +1485,7 @@ productRouter.get("/products/favourites", authenticateJWT, productController.get
 productRouter.get("/products/search", productController.searchProducts);
 productRouter.get("/products/filter", productController.filter);
 productRouter.get('/productbyattr', productController.productByAttribute);
+productRouter.patch('/products/update', productController.updateProduct);
 
 productRouter.get("/products2", productController.products2);
 productRouter.get("/menu/bypath", productController.menuByPass);
