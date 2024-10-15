@@ -104,7 +104,6 @@ exports.menu=async(req, res)=>{
         return res.json({message:err.message});
     }
 }
-
 exports.products=async(req, res)=>{
     
     const {limit, start, orderby, orderdir ,searchtext, categoryId, arrayvalues, attributeId,  minPrice, maxPrice} = req.query;
@@ -765,7 +764,6 @@ exports.addProduct2=async(req, res)=>{
         res.status(500).json({ message: 'Failed to process the image.', error: err.message });
     };
 }
-
 exports.addFavourite=async(req, res)=>{
     const {productId} = req.params;
     const userId = req.user.userId;
@@ -819,13 +817,13 @@ exports.addFavourite=async(req, res)=>{
         res.status(500).json({message:err.message});
     }
 }
-
 exports.oneProduct=async(req, res)=>{
     const {productId}=req.params;
     // cache key = product:[id]
     
     const schema = Joi.object({
-        id: Joi.string().pattern(/^\d+$/).required(), // only integer
+        // id: Joi.string().pattern(/^\d+$/).required(), // only integer
+        id:Joi.number().integer().required(),
     });
     const {error} = schema.validate({ id: productId });
     if(error){
@@ -839,11 +837,10 @@ exports.oneProduct=async(req, res)=>{
         if(iscached){
             console.log('restored from cache');
             return res.status(200).json(JSON.parse(iscached));
-            product =iscached;
         }else{
 
             product= await db.Products.findOne({
-                where:{id: parseInt(productId, 10)},
+                where:{id: productId},
                 attributes: { exclude: ['createdAt','updatedAt'] },
                 include:[
                     {
@@ -895,7 +892,6 @@ exports.oneProduct=async(req, res)=>{
         res.status(500).json({message:err.message});
     }
 }
-
 exports.getFavourites=async(req, res)=>{
     
     try{
@@ -1051,12 +1047,16 @@ exports.getAttributesByCategory=async(req, res)=>{
             }
             const attributesOfCategory={};
             attributes.forEach(attrValue=>{
-                if(!attributesOfCategory[attrValue.attribute.name]){
-                    attributesOfCategory[attrValue.attribute.name]=[];
+                if(!attributesOfCategory[attrValue.attribute.id]){
+                    attributesOfCategory[attrValue.attribute.id]={}
+                    attributesOfCategory[attrValue.attribute.id]['name']=attrValue.attribute.name;
+                    attributesOfCategory[attrValue.attribute.id]['values']=[];
+
                 }
-                attributesOfCategory[attrValue.attribute.name].push(attrValue.value);
+                attributesOfCategory[attrValue.attribute.id]['values'].push(attrValue.value);
             });
             
+            // cache key = attributes:[categoryId]
             await redis.set(`attributes:${categoryId}`, JSON.stringify({attributesOfCategory, minprice:minprice, maxprice:maxprice}));
             // redis.set(`attributes:${categoryId}`,JSON.stringify({attributesOfCategory, minprice:minprice, maxprice:maxprice}));
             return res.status(200).json({attributesOfCategory, minprice:minprice, maxprice:maxprice});
@@ -1065,7 +1065,6 @@ exports.getAttributesByCategory=async(req, res)=>{
         return res.status(500).json({message:err.message});
     }
 }
-
 exports.productByAttribute=async(req, res)=>{
 
     const {categoryId, attributeId, arrayvalues, minPrice, maxPrice} =req.query;
@@ -1199,7 +1198,6 @@ exports.productByAttribute=async(req, res)=>{
         return res.status(500).json({message:err.message});
     }
 }
-
 exports.addNewAttribute=async(req ,res)=>{
 
     const { attributeName }=req.body;
@@ -1510,7 +1508,6 @@ exports.caching=async(req, res)=>{
         return res.status(500).json({message:err.message});
     }
 }
-
 exports.updateProduct=async(req, res)=>{
     const {productId, title, description , price, coverId, categoryId} = req.body;
 
@@ -1554,7 +1551,14 @@ exports.updateProduct=async(req, res)=>{
     const transaction = await sequelize.transaction();
 
     try{
-        const product=await db.Products.findByPk(productId);
+        
+        const thisproductversions= await db.ProductVersions.findAll({
+            where:{
+                productId:productId
+            },
+            order:[['version', 'DESC']],
+        });
+        const product=await db.Products.findByPk(productId);        
         
 
         const newTitle = title ? title : product.title;
@@ -1562,7 +1566,8 @@ exports.updateProduct=async(req, res)=>{
         const newPrice = price ? price : product.price;
         const newCoverId = coverId ? coverId : product.coverId;
 
-        if(product.currentVersion===0){
+        if(product.currentVersion===0 && JSON.stringify(thisproductversions)=='[]'){
+            console.log("creating zero version");
             const oldproductCategory = await db.ProductCategories.findOne({
                 where:{
                     productId:productId,
@@ -1571,14 +1576,14 @@ exports.updateProduct=async(req, res)=>{
             console.log(JSON.stringify(oldproductCategory));
             const oldVersion=await db.ProductVersions.create({
                 productId:productId,
-                version:product.currentVersion,
+                version:0,
                 changes:{
                    'product':{ 
                     title:product.title,
                     description:product.description,
                     price:product.price,
                     coverId:product.coverId,
-                    currentVersion:product.currentVersion,}
+                    currentVersion:0}
                 },
                 'category':{
                     'categoryId':oldproductCategory.categoryId,
@@ -1586,16 +1591,24 @@ exports.updateProduct=async(req, res)=>{
             }, { transaction });
         }
         
+        let newversionNumber;
+
+        if(JSON.stringify(thisproductversions)=='[]'){
+            newversionNumber=product.currentVersion+1;
+        }else{
+            
+            newversionNumber=thisproductversions[0].version+1;
+        }
 
         let productFields = {
             title:newTitle,
             description:newDescription,
             price:newPrice,
             coverId:newCoverId, 
-            currentVersion:product.currentVersion+1, 
+            currentVersion:newversionNumber, 
         };
         
-        const changedProduct = await db.Products.update(
+       await db.Products.update(
             productFields,
             {
                 where:{id:productId}
@@ -1636,13 +1649,104 @@ exports.updateProduct=async(req, res)=>{
 
         const newVersion = await db.ProductVersions.create({
             productId:product.id,
-            version:product.currentVersion+1,
+            version:newversionNumber,
             changes:{'product':productFields, "category":categoryFields}
         },
         { transaction });
 
+        const changedProduct = await db.Products.findByPk(productId);
         await transaction.commit();
-        return res.status(200).json({newVersion});
+
+        //cache key = product:[productId]
+        await redis.set(`product:${productId}`, JSON.stringify(changedProduct));
+        return res.status(200).json({newVersion, changedProduct});
+
+    }catch(err){
+        await transaction.rollback();
+        return res.status(500).json({message:err.message});
+    }
+}
+exports.listUpdateHistory=async(req, res)=>{
+    const {productId} = req.params;
+
+    const schema = Joi.object({
+        productId: Joi.number().integer().required().messages({
+            'number.base': 'productId must be a number.',
+            'number.integer': 'productId must be an integer.',
+            'number.required':'productId is required.',
+        }),
+    });
+    const { error, value } = schema.validate({
+        productId:productId,
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
+    
+    try{
+        const product = await db.Products.findByPk(productId);
+        if(!product){
+            return res.status(400).json({message:"the product was not found!"});
+        }
+        
+        const productHistory= await db.ProductVersions.findAll({
+            where:{productId:productId},
+            attributes: { exclude: ['createdAt','updatedAt'] },
+        });
+
+        return res.status(200).json(productHistory);
+
+    }catch(err){
+        return res.status(500).json({message:err.message});
+    }
+}
+exports.reverseVersion=async(req, res)=>{
+    const {productVersionId, productId} = req.params;
+
+    const schema = Joi.object({
+        productId: Joi.number().integer().required().messages({
+            'number.base': 'productId must be a number.',
+            'number.integer': 'productId must be an integer.',
+            'number.required':'productId is required.',
+        }),
+        productVersionId: Joi.number().integer().required().messages({
+            'number.base': 'productVersionId must be a number.',
+            'number.integer': 'productVersionId must be an integer.',
+            'number.required':'productVersionId is required.',
+        }),
+    });
+    const { error, value } = schema.validate({
+        productId:productId,
+        productVersionId:productVersionId,
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
+
+    const transaction = await sequelize.transaction();
+
+    try{
+       
+       const productversion = await db.ProductVersions.findByPk(productVersionId);
+        
+       if(!productversion){
+            return res.status(404).json({message:"this version not found!"});
+       }
+
+
+       await db.Products.update(productversion.changes.product,{
+        where:{
+            id:productId,
+        }
+       },{ transaction });
+
+       const reversedproduct = await db.Products.findByPk(productId);
+
+       //cache key = product:[productId]
+       await redis.set(`product:${productId}`, JSON.stringify(reversedproduct));
+
+       await transaction.commit(reversedproduct);
+       return res.status(200).json(reversedproduct);
 
     }catch(err){
         await transaction.rollback();

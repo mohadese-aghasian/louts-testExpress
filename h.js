@@ -40,8 +40,6 @@ const { faker, el } = require('@faker-js/faker');
 //             const catattv=d.CategoryAttributeValues.findAll
 //         }
 
-     
-    
  
 // }
 // const generateProductAttributes = async () => {

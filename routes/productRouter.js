@@ -4,11 +4,11 @@ const authenticateJWT = require('../middleware/authMiddleware');
 const uploadMiddleware= require("../middleware/productCoverMilddleware");
 const productController = require('../controllers/productController');
 const userController=require("../controllers/userController");
-const blogController=require("../controllers/blogController");
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('../swaggerConfig');
 
 //////////////////////////////////
+
 /**
  * @swagger
  * /products2:
@@ -95,6 +95,8 @@ const swaggerSpec = require('../swaggerConfig');
  *       500:
  *         description: Internal server error - An error occurred while retrieving the products
  */
+
+
 /**
  * @swagger
  * /products:
@@ -201,6 +203,7 @@ const swaggerSpec = require('../swaggerConfig');
  *       500:
  *         description: Internal server error - An error occurred while retrieving the products
  */
+
 /**
  * @swagger
  * /products/addfavourite/{productId}:
@@ -484,9 +487,12 @@ const swaggerSpec = require('../swaggerConfig');
  *     security:
  *       - bearerAuth: []  # Adjust or remove if you have authentication
  */
+
+
+
 /**
  * @swagger
- * /products/oneproduct/{productId}:
+ * /products/{productId}:
  *   get:
  *     summary: Retrieve a specific product by its ID
  *     description: Fetches the details of a single product using its unique ID.
@@ -497,7 +503,7 @@ const swaggerSpec = require('../swaggerConfig');
  *         name: productId
  *         required: true
  *         schema:
- *           type: string  # Assuming ID is passed as a string of digits
+ *           type: integer  
  *         description: The unique ID of the product to retrieve
  *     responses:
  *       200:
@@ -547,6 +553,8 @@ const swaggerSpec = require('../swaggerConfig');
  *                   type: string
  *                   example: Error message
  */
+
+
 /**
  * @swagger
  * /products/favourites:
@@ -640,6 +648,7 @@ const swaggerSpec = require('../swaggerConfig');
  *       500:
  *         description: Internal Server Error - An error occurred while retrieving products.
  */
+
 /**
  * @swagger
  * /menu/bypath:
@@ -683,6 +692,7 @@ const swaggerSpec = require('../swaggerConfig');
  *     tags:
  *       - Categories
  */
+
 /**
  * @swagger
  * /menu:
@@ -1195,7 +1205,7 @@ const swaggerSpec = require('../swaggerConfig');
  *     description: Adds an attribute value to a specific product by providing the `productId` and `attributeValueId`, and then returns the updated product information.
  *     tags: 
  *       - Attributes
-*     requestBody:
+ *     requestBody:
  *       required: true
  *       content:
  *         application/json:
@@ -1282,38 +1292,38 @@ const swaggerSpec = require('../swaggerConfig');
 
 
 /**
-* @swagger
-* /cache:
-*   get:
-*     summary: Retrieve categories, either from cache or the database
-*     description: This endpoint attempts to retrieve categories from a cache. If no cached data is found, it fetches the categories from the database and then caches the result for future requests.
-*     responses:
-*       200:
-*         description: Successfully retrieved categories from cache or database
-*         content:
-*           application/json:
-*             schema:
-*               type: array
-*               items:
-*                 type: object
-*                 properties:
-*                   id:
-*                     type: integer
-*                     description: The category ID
-*                   name:
-*                     type: string
-*                     description: The category name
-*       500:
-*         description: Internal server error
-*         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 message:
-*                   type: string
-*                   description: Error message
-*/
+ * @swagger
+ * /cache:
+ *   get:
+ *     summary: Retrieve categories, either from cache or the database
+ *     description: This endpoint attempts to retrieve categories from a cache. If no cached data is found, it fetches the categories from the database and then caches the result for future requests.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved categories from cache or database
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The category ID
+ *                   name:
+ *                     type: string
+ *                     description: The category name
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message
+ */
 
 /**
  * @swagger
@@ -1323,7 +1333,7 @@ const swaggerSpec = require('../swaggerConfig');
  *     description: Updates the name and parent category of an existing category by `categoryId`. If the category is cached, it retrieves the cached category, otherwise, it fetches it from the database.
  *     tags: 
  *       - Categories
-*     requestBody:
+ *     requestBody:
  *       required: true
  *       content:
  *         application/json:
@@ -1383,6 +1393,68 @@ const swaggerSpec = require('../swaggerConfig');
  *                   description: Error message
  *                   example: "An error occurred while updating the category"
  */
+
+/**
+ * @swagger
+ * /products/{productId}/history:
+ *   get:
+ *     summary: Get the update history of a product.
+ *     description: Retrieve all the previous versions (update history) of a product by its ID.
+ *     tags:
+ *       - Products
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The ID of the product whose update history you want to retrieve.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the update history of the product.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     example: 1
+ *                   productId:
+ *                     type: integer
+ *                     example: 1
+ *                   version:
+ *                     type: integer
+ *                     example: 2
+ *                   changes:
+ *                     type: object
+ *                     description: Object containing the details of the changes made in the specific version.
+ *                     example: { "product": { "title": "New Title", "price": 99.99 }, "category": { "categoryId": 2 } }
+ *       400:
+ *         description: Invalid productId or product not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Product not found"
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+
+
 
 /**
  * @swagger
@@ -1471,6 +1543,85 @@ const swaggerSpec = require('../swaggerConfig');
  *                   example: "Internal server error"
  */
 
+/**
+ * @swagger
+ * /products/{productId}/history/{productVersionId}/reverse:
+ *   put:
+ *     summary: Reverse a product to a previous version.
+ *     description: Reverts the product to a previous version using the productVersionId.
+ *     tags:
+ *       - Products
+ *     parameters:
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: The ID of the product to revert.
+ *       - in: path
+ *         name: productVersionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           example: 2
+ *         description: The ID of the version to revert the product to.
+ *     responses:
+ *       200:
+ *         description: Successfully reverted the product to the specified version.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Product successfully reverted to version."
+ *                 product:
+ *                   type: object
+ *                   description: The updated product after the version reversal.
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     name:
+ *                       type: string
+ *                       example: "Reverted Product Name"
+ *                     price:
+ *                       type: number
+ *                       example: 100.0
+ *       400:
+ *         description: Bad request due to invalid productId or productVersionId format.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "productId must be an integer or productVersionId must be an integer."
+ *       404:
+ *         description: Product or product version not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "This version not found."
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+
 
 
 /////////////////////////////////
@@ -1480,7 +1631,9 @@ productRouter.post("/addproduct",  productController.addProduct);
 productRouter.post("/addproduct2", productController.addProduct2);
 productRouter.post("/addproduct/cover", uploadMiddleware, productController.uploadCover);
 productRouter.post("/products/addfavourite/:productId", authenticateJWT, productController.addFavourite);
-productRouter.get("/products/oneproduct/:productId", productController.oneProduct);
+productRouter.get("/products/:productId/history", productController.listUpdateHistory);
+productRouter.put("/products/:productId/history/:productVersionId/reverse", productController.reverseVersion);
+productRouter.get("/products/:productId", productController.oneProduct);
 productRouter.get("/products/favourites", authenticateJWT, productController.getFavourites);
 productRouter.get("/products/search", productController.searchProducts);
 productRouter.get("/products/filter", productController.filter);
