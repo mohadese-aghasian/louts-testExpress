@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Chat Between Browsers</title>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <h1>Chat Between Browsers</h1>
+    <input id="messageInput" type="text" placeholder="Type a message">
+    <button onclick="sendMessage()">Send</button>
+    
+    <div id="messages"></div>
+
+    <script>
+        // Connect to the Socket.IO server
+        const socket = io();
+
+        // Listen for messages from the server and display them in the messages div
+        socket.on('serverMessage', (message) => {
+            const messageElement = document.createElement('div');
+            messageElement.innerText = 'Received: ' + message;
+            document.getElementById('messages').appendChild(messageElement);
+        });
+
+        // Send a message to the server when the Send button is clicked
+        function sendMessage() {
+            const message = document.getElementById('messageInput').value;
+            socket.emit('clientMessage', message);  // Send message to server
+
+            // Optionally display the message in the sender's browser as well
+            const messageElement = document.createElement('div');
+            messageElement.innerText = 'You: ' + message;
+            document.getElementById('messages').appendChild(messageElement);
+            
+            // Clear the input field
+            document.getElementById('messageInput').value = '';
+        }
+    </script>
+</body>
+</html>

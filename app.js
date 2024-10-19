@@ -8,6 +8,8 @@ const swaggerSpec = require('./swaggerConfig');
 const cors= require("cors");
 const { compare } = require("bcryptjs");
 const UpdateCategoryViewJob = require("./jobs/cronjobs");
+const http = require('http');
+const socketIo = require('socket.io');
 
 
 /////////////////
@@ -27,6 +29,17 @@ const UpdateCategoryViewJob = require("./jobs/cronjobs");
 const app= express();
 const port=3000;
 
+
+
+const server = http.createServer(app);
+
+// Bind Socket.IO to the server
+const io = socketIo(server);
+
+
+
+
+
 app.use(cors());
 
 app.use(bodyparser.urlencoded({extended:true}));
@@ -36,6 +49,22 @@ app.get("/", (req, res)=>{
     res.json({data:"home"});
 });
 
+io.on('connection', (socket) => {
+    console.log('A client connected:', socket.id);
+
+    // Listen for messages from the client
+    socket.on('clientMessage', (message) => {
+        console.log('Received from client:', message);
+
+        // Send a message back to the client
+        socket.emit('serverMessage', 'Hello from the server!');
+    });
+
+    // Handle client disconnect
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
 //app.use(authenticateJWT);
 app.use('/api/v1', userRouter);
 app.use('/api/v2', blogrouter);

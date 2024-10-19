@@ -1622,6 +1622,143 @@ const swaggerSpec = require('../swaggerConfig');
  *                   example: "Internal server error"
  */
 
+/**
+ * @swagger
+ * /scrape:
+ *   post:
+ *     summary: Scrape a webpage for titles and descriptions
+ *     description: Scrapes the provided URL for all links' titles and meta descriptions, and saves the data in the database.
+ *     tags:
+ *       - Scraping
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               url:
+ *                 type: string
+ *                 description: The URL of the page to scrape.
+ *                 example: "https://www.example.com"
+ *     responses:
+ *       200:
+ *         description: Successfully scraped and saved titles and descriptions.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                   description: The unique ID of the scrape record.
+ *                   example: 1
+ *                 url:
+ *                   type: string
+ *                   description: The URL that was scraped.
+ *                   example: "https://www.example.com"
+ *                 titles:
+ *                   type: object
+ *                   description: An object containing all the scraped titles from links.
+ *                   example: {
+ *                     "titles": ["Home", "About Us", "Contact"]
+ *                   }
+ *                 descriptions:
+ *                   type: object
+ *                   description: An object containing the meta description of the page.
+ *                   example: {
+ *                     "descriptions": "This is a sample meta description."
+ *                   }
+ *       400:
+ *         description: Invalid URL format or validation error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "url must be a string."
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+
+/**
+ * @swagger
+ * /scrape:
+ *   get:
+ *     summary: Get a list of previously scraped URLs and their titles/descriptions
+ *     description: Retrieves a list of all URLs that have been scraped, along with their titles and meta descriptions.
+ *     tags:
+ *       - Scraping
+ *     parameters:
+ *       - in: query
+ *         name: url
+ *         schema:
+ *           type: string
+ *           description: The specific URL to filter the results.
+ *         required: false
+ *         description: The URL to filter the scraped data.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the list of scrapes.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: The unique ID of the scrape record.
+ *                     example: 1
+ *                   url:
+ *                     type: string
+ *                     description: The URL that was scraped.
+ *                     example: "https://www.example.com"
+ *                   titles:
+ *                     type: object
+ *                     description: An object containing all the scraped titles from links.
+ *                     example: {
+ *                       "titles": ["Home", "About Us", "Contact"]
+ *                     }
+ *                   descriptions:
+ *                     type: object
+ *                     description: An object containing the meta description of the page.
+ *                     example: {
+ *                       "descriptions": "This is a sample meta description."
+ *                     }
+ *       400:
+ *         description: Invalid URL format or validation error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "url must be a string."
+ *       500:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+
 
 
 /////////////////////////////////
@@ -1653,6 +1790,9 @@ productRouter.post('/addnewcategory', productController.addCategory);
 productRouter.post('/addattributevaluetoproduct', productController.addAttributeValueToProduct);
 productRouter.patch('/updatecategory', productController.updateCategory);
 
+
+productRouter.post('/scrape', productController.scrape);
+productRouter.get('/scrape', productController.listScrapes);
 
 productRouter.get('/cache', productController.caching);
 

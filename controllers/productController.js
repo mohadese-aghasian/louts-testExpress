@@ -9,6 +9,10 @@ const sharp = require('sharp');
 const { name } = require('ejs');
 const Redis = require('ioredis');
 const { sequelize } = require('../models');
+const axios = require('axios');
+const cheerio = require('cheerio');
+const { ur } = require('@faker-js/faker');
+const { title } = require('process');
 
 //////////////// CACHE //////
 // const myCache = new NodeCache();
@@ -1750,6 +1754,93 @@ exports.reverseVersion=async(req, res)=>{
 
     }catch(err){
         await transaction.rollback();
+        return res.status(500).json({message:err.message});
+    }
+}
+exports.scrape=async(req, res)=>{
+    const {url} = req.body;
+
+    const schema = Joi.object({
+        url: Joi.string().required().messages({
+            'string.string': 'url must be a string.',
+            // 'string.dataUri': 'url must be a valid url.',
+            'string.required':'url is required.',
+        }),
+    });
+    const { error, value } = schema.validate({
+        url:url,
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
+
+    try{
+        const {data} = await axios.get(url);
+
+        const $ =cheerio.load(data);
+
+        // const title = $('title').text();
+        const links = [];
+        $('a').each((i, elem) => {
+            const title = $(elem).attr('title');
+            // Only add valid URLs (filtering out invalid or relative links)
+            if (title) {
+                links.push(title);
+            }
+        });
+        const description = $('meta[name="description"]').attr('content');
+
+
+        const titles={'titles':links};
+        const descriptions={'descriptions':description};
+
+
+        console.log('title: ', titles);
+        console.log('t :', title);
+        console.log('desc: ',descriptions);
+
+        const Scrape = await db.TitlesDescriptions.create({
+            url:url,
+            titles:titles,
+            descriptions:descriptions,
+        });
+
+        return res.status(200).json(Scrape);
+
+    }catch(err){
+        return res.status(500).json({message:err.message});
+    }
+}
+exports.listScrapes=async(req,res)=>{
+    const {url} = req.query;
+
+    const schema = Joi.object({
+        url: Joi.string().messages({
+            'string.string': 'url must be a string.',
+            // 'string.dataUri': 'url must be a valid url.',
+            'string.required':'url is required.',
+        }),
+    });
+    const { error, value } = schema.validate({
+        url:url,
+    });
+    if(error){
+        return res.status(400).json({message:error.details[0].message});
+    }
+    try{
+        let urlClause ={};
+        if(url){
+            urlClause={url:url};
+        }
+        
+        const scrapes = await db.TitlesDescriptions.findAll({
+            attributes: { exclude: ['createdAt','updatedAt'] }, 
+            where:urlClause,   
+        });
+
+        return res.status(200).json(scrapes);
+
+    }catch(err){
         return res.status(500).json({message:err.message});
     }
 }
